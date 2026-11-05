@@ -36,7 +36,7 @@ function AlunosPorTurma({ turmas }: { turmas: Row[] }) {
         return (
           <g key={t.id}>
             <title>{`${t.designacao}: ${v} aluno(s) de ${t.capacidade}`}</title>
-            <rect x={x} y={base - bh} width={larg} height={Math.max(bh, 1)} rx="3" fill={t.cheia ? 'var(--er)' : '#2e3192'} />
+            <rect x={x} y={base - bh} width={larg} height={Math.max(bh, 1)} rx="3" fill={t.cheia ? 'var(--er)' : 'var(--ac)'} />
             <text x={x + larg / 2} y={base - bh - 5} textAnchor="middle" fontSize="11" fill="var(--tx)" fontWeight="600">{v}</text>
             <text x={x + larg / 2} y={base + 16} textAnchor="middle" fontSize="11" fill="var(--mu)">{t.designacao}</text>
           </g>
@@ -115,7 +115,7 @@ export default function VisaoGeral() {
               <ul className="vg-lista vg-tempo">
                 {auditoria.rows.slice(0, 8).map((a) => (
                   <li key={a.id}>
-                    <span className="avatar-sm" style={{ width: 34, height: 34, background: '#2e3192' }}>{iniciais(String(a.utilizador ?? 'Sistema'))}</span>
+                    <span className="avatar-sm" style={{ width: 34, height: 34, background: 'var(--ac)' }}>{iniciais(String(a.utilizador ?? 'Sistema'))}</span>
                     <span><b>{a.utilizador ?? 'Sistema'}</b> <span className="mu">— {dataPT(a.criado_em, true)}</span></span>
                     <span className="vg-etiqueta">{ACCOES[a.accao] ?? a.accao} · {TABELAS[a.tabela] ?? a.tabela}</span>
                   </li>

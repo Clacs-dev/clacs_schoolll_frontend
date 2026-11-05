@@ -92,14 +92,9 @@ export function useTheme() {
   return toggle
 }
 
-/** Marca: um capelo estilizado em turquesa, como o logótipo do Exitus. */
-export const Logo = () => (
-  <svg viewBox="0 0 64 64" aria-hidden="true">
-    <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="#19c3b9" strokeWidth="3" />
-    <path d="M12 27 32 17l20 10-20 10-20-10Zm8 8v8c0 3 6 6 12 6s12-3 12-6v-8l-12 6-12-6Z" fill="#19c3b9" />
-    <circle cx="52" cy="27" r="2.5" fill="#19c3b9" /><path d="M52 27v12" stroke="#19c3b9" strokeWidth="2" />
-  </svg>
-)
+/** Logótipo horizontal da escola (fundo transparente, pensado para fundos azul-escuros). */
+export const Logo = () => <img className="marca-logo" src="/site/logo-horizontal.png" alt="Talatona Kids" width="672" height="117" />
+
 
 export const nomeEscola = (user: Row | null) => String(pick(user, 'estabelecimento.nome') ?? 'Talatona Kids')
 
@@ -166,7 +161,7 @@ function Lado({ open, children }: { open: boolean; children: ReactNode }) {
     <aside className={`side ${open ? 'open' : ''}`} aria-label="Navegação principal">
       <div className="brand">
         <Logo />
-        <div><b>{nomeEscola(user)}</b><small>Gestão escolar</small></div>
+        <small>{nomeEscola(user)} · Gestão escolar</small>
       </div>
       {children}
     </aside>

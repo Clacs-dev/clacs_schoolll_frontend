@@ -24,6 +24,7 @@ A API é configurada em `.env` (`VITE_API_BASE_URL`, por omissão `/api`):
 
 | Área | Rotas |
 | --- | --- |
+| Site público (sem conta) | `/`, `/oferta-educativa`, `/galeria`, `/candidatura` (pré-inscrição), `/contactos`; com sessão aberta, `/` leva à aplicação |
 | Direcção | `/painel`, `/alertas`, `/assistente` |
 | Admissões | `/candidaturas` (pré-inscrições do Google Forms até às boas-vindas); `/candidatura/:token` é a página pública da família |
 | Secretaria | `/alunos`, `/alunos/:id` (visão 360°), `/encarregados`, `/matriculas`, `/turmas`, `/academico` |
@@ -42,6 +43,7 @@ src/lib/        api.ts (cliente + token + downloads), hooks.ts (useGet/useList/u
 src/components/ Table, FormDialog (formulários declarativos), Resource (lista+criar+editar), Modal, Auto, ui, Layout
 src/pages/      uma página por módulo de gestão
 src/portal/     páginas do portal do encarregado
+src/site/       site público; textos e lista de fotografias em conteudo.ts, imagens em public/site/
 scripts/sondar-api.mjs   recolhe amostras reais da API
 ```
 

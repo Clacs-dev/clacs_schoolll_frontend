@@ -25,13 +25,35 @@ function ApiStatus() {
 
 const ESCOLA = (import.meta.env.VITE_ESCOLA_NOME as string | undefined) || 'Talatona Kids'
 
-/** Fundo azul-escuro com a marca no topo (início de sessão, escolha do módulo e recuperação de senha). */
+/**
+ * Início de sessão e recuperação de senha: fotografia da escola a um lado e formulário ao outro.
+ * "largo" (página da família): fundo azul-escuro a toda a largura, para formulários compridos.
+ */
 export function AuthShell({ children, largo }: { children: ReactNode; largo?: boolean }) {
+  const rodape = <footer className="entrada-rodape">© {new Date().getFullYear()} {ESCOLA}. Todos os direitos reservados.</footer>
+  if (largo) {
+    return (
+      <div className="entrada">
+        <header className="entrada-marca"><Link to="/"><Logo /></Link></header>
+        <div className="entrada-largo">{children}</div>
+        {rodape}
+      </div>
+    )
+  }
   return (
-    <div className="entrada">
-      <header className="entrada-marca"><Logo /><span>{ESCOLA.toUpperCase()}</span></header>
-      <div className={largo ? 'entrada-largo' : 'entrada-caixa'}>{children}</div>
-      <footer className="entrada-rodape">Copyright © {new Date().getFullYear()} {ESCOLA} | Todos os direitos reservados</footer>
+    <div className="entrada-dividida">
+      <aside className="entrada-foto">
+        <Link to="/" aria-label={`${ESCOLA}, ir para o site`}><Logo /></Link>
+        <div>
+          <b>Educar é criar laços e dar afectos.</b>
+          <Link to="/">← Voltar ao site</Link>
+        </div>
+      </aside>
+      <main className="entrada-painel">
+        <Link className="entrada-logo-m" to="/" aria-label={`${ESCOLA}, ir para o site`}><Logo /></Link>
+        <div className="entrada-form">{children}</div>
+        {rodape}
+      </main>
     </div>
   )
 }
