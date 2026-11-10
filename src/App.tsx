@@ -35,6 +35,11 @@ function Area({ portal }: { portal: boolean }) {
   return <Outlet />
 }
 
+function Home() {
+  const { isPortal } = useAuth()
+  return <Navigate to={isPortal ? '/portal' : '/inicio'} replace />
+}
+
 const staff: RouteObject[] = [
   at('inicio', () => import('@/pages/VisaoGeral')),
   at('gestao', () => import('@/pages/GestaoGeral')),
@@ -88,18 +93,7 @@ const router = createBrowserRouter([
   { path: '/redefinir', Component: Redefinir },
   { path: '/candidatura/:token', ...page(() => import('@/pages/Formalizacao')) }, // a família, sem conta
   {
-    // site público, sem conta
-    lazy: async () => ({ Component: (await import('@/site/SiteLayout')).default }),
-    ErrorBoundary: RouteError,
-    children: [
-      { index: true, lazy: async () => ({ Component: (await import('@/site/Inicio')).default }) },
-      at('oferta-educativa', () => import('@/site/OfertaEducativa')),
-      at('galeria', () => import('@/site/Galeria')),
-      at('contactos', () => import('@/site/Contactos')),
-      at('candidatura', () => import('@/pages/PreInscricao')),
-    ],
-  },
-  {
+    path: '/',
     Component: Shell,
     ErrorBoundary: RouteError,
     children: [
@@ -107,6 +101,7 @@ const router = createBrowserRouter([
         // erros de página aparecem dentro do layout, mantendo o menu lateral
         ErrorBoundary: RouteError,
         children: [
+          { index: true, Component: Home },
           at('conta', () => import('@/pages/Conta')),
           { element: <Area portal={false} />, children: staff },
           { element: <Area portal />, children: portal },

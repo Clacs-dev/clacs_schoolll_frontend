@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
+import { AnimatePresence, m } from 'motion/react'
 import { useAuth } from '@/auth/AuthContext'
 import { nameOf, pick, type Row } from '@/lib/data'
 import { AuthImage } from './AuthImage'
+import { Pagina, T_NORMAL, T_RAPIDO } from './Motion'
 
 /* ---------------------------------------------------------------- ícones do menu (traço simples) */
 const PATHS: Record<string, string> = {
@@ -181,7 +183,9 @@ export function Layout() {
 
   return (
     <div className={`app ${escondido ? 'side-off' : ''}`}>
-      {aberto && <div className="scrim" onClick={() => setAberto(false)} />}
+      <AnimatePresence>
+        {aberto && <m.div className="scrim" key="scrim" onClick={() => setAberto(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={T_RAPIDO} />}
+      </AnimatePresence>
       <Lado open={aberto}>
         <NavLink to="/inicio" className={nl}><Icone n="home" /> Home</NavLink>
         <hr className="side-hr" />
@@ -197,14 +201,17 @@ export function Layout() {
                 <span className="nav-g-l"><Icone n={g.icon} /> {g.group}</span>
                 <Chev open={expandido} />
               </button>
-              {expandido && (
-                <nav aria-label={g.group} className="nav-sub">
-                  {itens.map(([to, l]) => (
-                    // className em função: o NavLink não junta o "active" dele, que só olha para o caminho
-                    <NavLink key={to} to={to} className={() => `nl ${activo(to, loc.pathname, loc.search) ? 'active' : ''}`}>{l}</NavLink>
-                  ))}
-                </nav>
-              )}
+              <AnimatePresence initial={false}>
+                {expandido && (
+                  <m.nav aria-label={g.group} className="nav-sub" key="sub"
+                    initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={T_NORMAL}>
+                    {itens.map(([to, l]) => (
+                      // className em função: o NavLink não junta o "active" dele, que só olha para o caminho
+                      <NavLink key={to} to={to} className={() => `nl ${activo(to, loc.pathname, loc.search) ? 'active' : ''}`}>{l}</NavLink>
+                    ))}
+                  </m.nav>
+                )}
+              </AnimatePresence>
             </div>
           )
         })}
@@ -212,7 +219,7 @@ export function Layout() {
       </Lado>
       <div className="corpo">
         <Topo onMenu={menu} />
-        <main className="main" id="conteudo"><Outlet /></main>
+        <main className="main" id="conteudo"><Pagina key={loc.pathname}><Outlet /></Pagina></main>
       </div>
     </div>
   )
@@ -232,7 +239,9 @@ export function PortalLayout() {
   ]
   return (
     <div className={`app ${escondido ? 'side-off' : ''}`}>
-      {aberto && <div className="scrim" onClick={() => setAberto(false)} />}
+      <AnimatePresence>
+        {aberto && <m.div className="scrim" key="scrim" onClick={() => setAberto(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={T_RAPIDO} />}
+      </AnimatePresence>
       <Lado open={aberto}>
         <div className="side-titulo">Portal do encarregado</div>
         {items.map(([to, l, ic]) => <NavLink key={to} to={to} end={to === '/portal'} className={nl}><Icone n={ic} /> {l}</NavLink>)}
@@ -240,7 +249,7 @@ export function PortalLayout() {
       </Lado>
       <div className="corpo">
         <Topo onMenu={menu} />
-        <main className="main" id="conteudo"><Outlet /></main>
+        <main className="main" id="conteudo"><Pagina key={loc.pathname}><Outlet /></Pagina></main>
       </div>
     </div>
   )

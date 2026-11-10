@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { AnimatePresence, m } from 'motion/react'
+import { T_RAPIDO } from './Motion'
 import { Btn, KV } from './ui'
 import type { Row } from '@/lib/data'
 
@@ -32,16 +34,18 @@ export function Modal({
   }, [onClose])
 
   return createPortal(
-    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal ${size}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
+    <m.div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={T_RAPIDO}>
+      <m.div className={`modal ${size}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}
+        initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.98 }}>
         <header className="modal-h">
           <h3>{title}</h3>
           <button type="button" className="x" onClick={onClose} aria-label="Fechar">×</button>
         </header>
         <div className="modal-b">{children}</div>
         {footer && <footer className="modal-f">{footer}</footer>}
-      </div>
-    </div>,
+      </m.div>
+    </m.div>,
     document.body,
   )
 }
@@ -61,8 +65,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmCtx.Provider value={confirm}>
       {children}
+      <AnimatePresence>
       {st && (
         <Modal
+          key="confirmar"
           size="sm"
           title={st.title || 'Confirmar'}
           onClose={() => done(false)}
@@ -76,6 +82,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           <p style={{ margin: 0 }}>{st.text}</p>
         </Modal>
       )}
+      </AnimatePresence>
     </ConfirmCtx.Provider>
   )
 }

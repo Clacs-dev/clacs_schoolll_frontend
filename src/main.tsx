@@ -5,6 +5,7 @@ import { AuthProvider } from '@/auth/AuthContext'
 import { ToastProvider } from '@/components/Toast'
 import { ConfirmProvider } from '@/components/Modal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { MotionProvider } from '@/components/Motion'
 import { ApiError } from '@/lib/api'
 import App from './App'
 import './styles/app.css'
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
+        <MotionProvider>
         <ToastProvider>
           <ConfirmProvider>
             <AuthProvider>
@@ -35,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
             </AuthProvider>
           </ConfirmProvider>
         </ToastProvider>
+        </MotionProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,

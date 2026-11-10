@@ -1,32 +1,16 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { useAuth } from '@/auth/AuthContext'
-import { API_BASE, api, errMsg } from '@/lib/api'
+import { api, errMsg } from '@/lib/api'
 import { Btn } from '@/components/ui'
 import { Logo } from '@/components/Layout'
-
-function ApiStatus() {
-  const [st, setSt] = useState('')
-  const testar = async () => {
-    setSt('A testar…')
-    try {
-      const r = await fetch(`${API_BASE}/health`)
-      setSt(r.ok ? 'Ligação ao servidor OK.' : `O servidor respondeu ${r.status}.`)
-    } catch (e) {
-      setSt(`Sem ligação: ${e instanceof Error ? e.message : String(e)}`)
-    }
-  }
-  return (
-    <p className="mu" style={{ fontSize: 12, margin: 0, overflowWrap: 'anywhere' }}>
-      Servidor: {API_BASE} · <button type="button" className="btn link" style={{ fontSize: 12 }} onClick={testar}>Testar ligação</button> {st}
-    </p>
-  )
-}
+import { m } from 'motion/react'
+import { EASE } from '@/components/Motion'
 
 const ESCOLA = (import.meta.env.VITE_ESCOLA_NOME as string | undefined) || 'Talatona Kids'
 
 /**
- * Início de sessão e recuperação de senha: fotografia da escola a um lado e formulário ao outro.
+ * Início de sessão e recuperação de senha: o "hero" da escola, com o texto à esquerda e o formulário à direita.
  * "largo" (página da família): fundo azul-escuro a toda a largura, para formulários compridos.
  */
 export function AuthShell({ children, largo }: { children: ReactNode; largo?: boolean }) {
@@ -34,26 +18,31 @@ export function AuthShell({ children, largo }: { children: ReactNode; largo?: bo
   if (largo) {
     return (
       <div className="entrada">
-        <header className="entrada-marca"><Link to="/"><Logo /></Link></header>
+        <header className="entrada-marca"><Link to="/login"><Logo /></Link></header>
         <div className="entrada-largo">{children}</div>
         {rodape}
       </div>
     )
   }
   return (
-    <div className="entrada-dividida">
-      <aside className="entrada-foto">
-        <Link to="/" aria-label={`${ESCOLA}, ir para o site`}><Logo /></Link>
-        <div>
-          <b>Educar é criar laços e dar afectos.</b>
-          <Link to="/">← Voltar ao site</Link>
-        </div>
-      </aside>
-      <main className="entrada-painel">
-        <Link className="entrada-logo-m" to="/" aria-label={`${ESCOLA}, ir para o site`}><Logo /></Link>
-        <div className="entrada-form">{children}</div>
-        {rodape}
+    <div className="entrada-hero">
+      <header className="eh-cab">
+        <div className="eh-caixa"><Link to="/login" aria-label={ESCOLA}><Logo /></Link></div>
+        <div className="eh-fita" aria-hidden="true"><i /><i /><i /><i /><i /></div>
+      </header>
+      <main className="eh-caixa eh-grelha">
+        <m.div className="eh-texto" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
+          <p className="eh-etiqueta">Creche · Pré-Escolar · Ensino Primário · I Ciclo</p>
+          <h1>Educar é criar laços e dar <span>afectos</span></h1>
+          <p className="eh-p">No {ESCOLA}, cada criança é única e especial. A nossa missão é nutrir talentos, desenvolver habilidades e criar memórias que duram para toda a vida.</p>
+        </m.div>
+        <m.div className="eh-cartao" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.12, ease: EASE }}>
+          <span className="eh-cor eh-cor-a" aria-hidden="true" />
+          <span className="eh-cor eh-cor-b" aria-hidden="true" />
+          <div className="entrada-caixa">{children}</div>
+        </m.div>
       </main>
+      {rodape}
     </div>
   )
 }
@@ -104,8 +93,7 @@ export function Login() {
           </label>
         )}
         <Btn type="submit" busy={busy}>Entrar</Btn>
-        <div className="links"><Link to="/recuperar">Esqueci a palavra-passe</Link><Link to="/candidatura">Pré-inscrição de um aluno novo</Link></div>
-        <ApiStatus />
+        <div className="links"><Link to="/recuperar">Esqueci a minha palavra-passe</Link></div>
       </form>
     </AuthShell>
   )

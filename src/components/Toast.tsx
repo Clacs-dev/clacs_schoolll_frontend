@@ -1,3 +1,4 @@
+import { AnimatePresence, m } from 'motion/react'
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 
 type Kind = 'ok' | 'er' | 'n'
@@ -26,11 +27,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastCtx.Provider value={ctx}>
       {children}
       <div className="toasts" role="status" aria-live="polite">
-        {items.map((i) => (
-          <div key={i.id} className={`toast-i ${i.kind}`}>
-            {i.text}
-          </div>
-        ))}
+        <AnimatePresence initial={false}>
+          {items.map((i) => (
+            <m.div key={i.id} className={`toast-i ${i.kind}`} layout
+              initial={{ opacity: 0, y: 12, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.14 } }}>
+              {i.text}
+            </m.div>
+          ))}
+        </AnimatePresence>
       </div>
     </ToastCtx.Provider>
   )
