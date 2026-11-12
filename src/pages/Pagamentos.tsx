@@ -9,7 +9,7 @@ import { api, errMsg } from '@/lib/api'
 import { num, pick, type Row } from '@/lib/data'
 import { Kz, dataPT, hojeISO, mesAno } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
-import { emDivida } from './Cobrancas'
+import { cobrancaId, emDivida } from './Cobrancas'
 
 function NovoPagamento({ onClose }: { onClose: () => void }) {
   const [enc, setEnc] = useState('')
@@ -22,7 +22,7 @@ function NovoPagamento({ onClose }: { onClose: () => void }) {
   const encs = useList('/encarregados')
   const metodos = useList('/metodos-pagamento')
   const abertas = useList(enc ? '/cobrancas' : null, { encarregado_id: enc, estado: 'divida' })
-  const total = useMemo(() => abertas.rows.filter((r) => sel.includes(r.id)).reduce((s, r) => s + emDivida(r), 0), [abertas.rows, sel])
+  const total = useMemo(() => abertas.rows.filter((r) => sel.includes(cobrancaId(r))).reduce((s, r) => s + emDivida(r), 0), [abertas.rows, sel])
   const criar = useAct((p: Row) => api.post('/pagamentos', p), { invalidate: ['/pagamentos', '/cobrancas', '/painel', '/alertas'], ok: 'Pagamento registado.', onDone: onClose })
 
   const submit = (e: FormEvent) => {
@@ -54,6 +54,7 @@ function NovoPagamento({ onClose }: { onClose: () => void }) {
               empty="Este encarregado não tem cobranças em aberto."
               selected={sel}
               onSelect={(ids) => setSel(ids as number[])}
+              rowKey={cobrancaId}
               cols={[
                 { h: 'Aluno', k: ['aluno', 'aluno_nome', 'aluno.nome_completo'] },
                 { h: 'Serviço', k: ['servico', 'servico_nome', 'servico.nome'] },

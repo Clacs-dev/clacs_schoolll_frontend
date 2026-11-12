@@ -12,9 +12,12 @@ import { useAct, useList } from '@/lib/hooks'
 import { useToast } from '@/components/Toast'
 import { MapaCobranca, ResumoGeracao } from './MapaCobranca'
 
+/** Id da cobrança: as listagens de cobranças devolvem `cobranca_id` (não `id`). Usar como rowKey nas tabelas com selecção. */
+export const cobrancaId = (r: Row) => Number(pick(r, 'cobranca_id', 'id'))
+
 /** Valor em dívida de uma cobrança, qualquer que seja o formato devolvido. */
 export const emDivida = (r: Row) => {
-  const saldo = pick(r, 'saldo', 'valor_em_divida', 'em_divida', 'valor_pendente')
+  const saldo = pick(r, 'valor_em_aberto', 'saldo', 'valor_em_divida', 'em_divida', 'valor_pendente')
   if (saldo !== undefined) return num(saldo)
   const tot = num(pick(r, 'valor_total', 'valor', 'valor_final', 'valor_base'))
   return Math.max(0, tot - num(pick(r, 'valor_pago', 'pago')))
@@ -115,6 +118,7 @@ export default function Cobrancas() {
         onRetry={() => lista.refetch()}
         selected={sel}
         onSelect={setSel}
+        rowKey={cobrancaId}
         onRow={(r) => { const a = pick(r, 'aluno_id', 'aluno.id'); if (a) nav(`/alunos/${a}`) }}
         empty="Nenhum registo com estes filtros."
         cols={[
@@ -171,7 +175,7 @@ export default function Cobrancas() {
           intro={sel.length ? `${sel.length} cobrança(s) seleccionada(s).` : `Serão avisados os encarregados dos ${devedores.length} registos em dívida desta lista.`}
           onClose={() => setDlg(null)}
           fields={[{ name: 'canais', label: 'Canais', type: 'multi', options: CANAIS, default: ['whatsapp'] }]}
-          onSubmit={(p) => lembrete.mutateAsync(sel.length ? { ...p, cobranca_ids: sel.map(Number) } : { ...p, turma_id: turmaId ? Number(turmaId) : undefined, servico_id: servico ? Number(servico) : undefined, q: q || undefined, cobranca_ids: devedores.map((d) => d.id).filter(Boolean) })} />
+          onSubmit={(p) => lembrete.mutateAsync(sel.length ? { ...p, cobranca_ids: sel.map(Number) } : { ...p, turma_id: turmaId ? Number(turmaId) : undefined, servico_id: servico ? Number(servico) : undefined, q: q || undefined, cobranca_ids: devedores.map(cobrancaId).filter(Boolean) })} />
       )}
       {res && <ResultDialog title={res.t} data={res.d} onClose={() => setRes(null)} />}
     </>

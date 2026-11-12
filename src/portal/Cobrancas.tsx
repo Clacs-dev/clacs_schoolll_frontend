@@ -7,7 +7,7 @@ import { api } from '@/lib/api'
 import { pick, type Row } from '@/lib/data'
 import { Kz, dataPT, mesAno } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
-import { emDivida, estadoCobranca } from '@/pages/Cobrancas'
+import { cobrancaId, emDivida, estadoCobranca } from '@/pages/Cobrancas'
 
 export default function PortalCobrancas() {
   const [estado, setEstado] = useState('')
@@ -17,7 +17,7 @@ export default function PortalCobrancas() {
   const q = useList('/portal/cobrancas', { estado })
 
   const rows = q.rows
-  const total = useMemo(() => rows.filter((r) => sel.includes(r.id)).reduce((s, r) => s + emDivida(r), 0), [rows, sel])
+  const total = useMemo(() => rows.filter((r) => sel.includes(cobrancaId(r))).reduce((s, r) => s + emDivida(r), 0), [rows, sel])
   const gerar = useAct((ids: number[]) => api.post<Row>('/portal/pagamentos/referencia', { cobranca_ids: ids }), { silent: true, invalidate: ['/portal/pagamentos'], onDone: (r) => setRef(r ?? {}) })
   const enviar = useAct((v: { ref?: string; f: File }) => {
     const d = new FormData()
@@ -39,7 +39,7 @@ export default function PortalCobrancas() {
       </Toolbar>
       <Table
         rows={rows} loading={q.isLoading} error={q.error} onRetry={() => q.refetch()}
-        selected={sel} onSelect={setSel} empty="Não há cobranças para mostrar."
+        selected={sel} onSelect={setSel} rowKey={cobrancaId} empty="Não há cobranças para mostrar."
         cols={[
           { h: 'Educando', k: ['aluno', 'aluno_nome', 'aluno.nome_completo'] },
           { h: 'Serviço', k: ['servico', 'servico_nome', 'servico.nome'] },
