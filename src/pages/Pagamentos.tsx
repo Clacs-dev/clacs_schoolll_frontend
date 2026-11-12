@@ -139,7 +139,9 @@ export default function Pagamentos() {
                     <Btn variant="link" onClick={async () => { if (await confirm({ title: 'Rejeitar pagamento', text: 'As cobranças ligadas voltam a ficar em dívida.', danger: true, yes: 'Rejeitar' })) rejeitar.mutate(r.id) }}>Rejeitar</Btn>
                   </>
                 )}
-                <Btn variant="link" onClick={() => setComp(r)}>Comprovativo</Btn>
+                {pick(r, 'comprovativo_url')
+                  ? <Btn variant="link" onClick={() => api.download(String(pick(r, 'comprovativo_url')).replace(/^.*\/api/, ''), undefined, undefined, true).catch((e) => toast.error(errMsg(e)))}>Ver comprovativo</Btn>
+                  : <Btn variant="link" onClick={() => setComp(r)}>Anexar comprovativo</Btn>}
                 <Btn variant="link" onClick={() => api.download(`/pagamentos/${r.id}/recibo.pdf`, undefined, undefined, true).catch((e) => toast.error(errMsg(e)))}>Recibo</Btn>
               </span>
             ),
