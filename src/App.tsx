@@ -6,8 +6,35 @@ import { Loading } from '@/components/ui'
 import { Login, Recuperar, Redefinir } from '@/pages/Login'
 
 type Loader = () => Promise<{ default: React.ComponentType }>
+
+/**
+ * Depois de uma nova publicação, os ficheiros da versão anterior deixam de existir. Uma aba aberta antes
+ * ainda os pede ("Failed to fetch dynamically imported module"): recarrega a página uma vez para obter
+ * a versão nova. O registo em sessionStorage evita um ciclo de recargas se o erro for outro.
+ */
+const RECARGA = 'clacs.recarga-versao'
+const versaoAntiga = (e: unknown) =>
+  /dynamically imported module|Importing a module script failed|error loading dynamically|Unable to preload CSS/i.test(String((e as Error)?.message ?? e))
+
+async function carregar(load: Loader) {
+  try {
+    const m = await load()
+    try { sessionStorage.removeItem(RECARGA) } catch { /* sem storage */ }
+    return m
+  } catch (e) {
+    let ultima = 0
+    try { ultima = Number(sessionStorage.getItem(RECARGA) || 0) } catch { /* sem storage */ }
+    if (versaoAntiga(e) && Date.now() - ultima > 60_000) {
+      try { sessionStorage.setItem(RECARGA, String(Date.now())) } catch { /* sem storage */ }
+      location.reload()
+      return new Promise<never>(() => {}) // a página vai recarregar
+    }
+    throw e
+  }
+}
+
 const page = (load: Loader): RouteObject => ({
-  lazy: async () => ({ Component: (await load()).default }),
+  lazy: async () => ({ Component: (await carregar(load)).default }),
 })
 const at = (path: string, load: Loader): RouteObject => ({ path, ...page(load) })
 
