@@ -14,7 +14,7 @@ const ESCOLA = (import.meta.env.VITE_ESCOLA_NOME as string | undefined) || 'Tala
  * "largo" (página da família): fundo azul-escuro a toda a largura, para formulários compridos.
  */
 export function AuthShell({ children, largo }: { children: ReactNode; largo?: boolean }) {
-  const rodape = <footer className="entrada-rodape">© {new Date().getFullYear()} {ESCOLA}. Todos os direitos reservados.</footer>
+  const rodape = <footer className="entrada-rodape">© Clacstecnologia.com. Todos os direitos reservados.</footer>
   if (largo) {
     return (
       <div className="entrada">
