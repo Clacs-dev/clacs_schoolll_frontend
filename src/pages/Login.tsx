@@ -14,11 +14,17 @@ const ESCOLA = (import.meta.env.VITE_ESCOLA_NOME as string | undefined) || 'Tala
  * "largo" (página da família): fundo azul-escuro a toda a largura, para formulários compridos.
  */
 export function AuthShell({ children, largo }: { children: ReactNode; largo?: boolean }) {
-  const rodape = <footer className="entrada-rodape">© Clacstecnologia.com. Todos os direitos reservados.</footer>
+  const rodape = <footer className="entrada-rodape">© <a href="https://clacstecnologia.com" target="_blank" rel="noopener noreferrer">Clacstecnologia.com</a>. Todos os direitos reservados.</footer>
+  const marca = (
+    <Link to="/login" className="eh-marca" aria-label={`${ESCOLA} — Sistema de Gestão Escolar`}>
+      <Logo />
+      <span className="eh-marca-sub">Sistema de Gestão Escolar</span>
+    </Link>
+  )
   if (largo) {
     return (
       <div className="entrada">
-        <header className="entrada-marca"><Link to="/login"><Logo /></Link></header>
+        <header className="entrada-marca">{marca}</header>
         <div className="entrada-largo">{children}</div>
         {rodape}
       </div>
@@ -27,7 +33,7 @@ export function AuthShell({ children, largo }: { children: ReactNode; largo?: bo
   return (
     <div className="entrada-hero">
       <header className="eh-cab">
-        <div className="eh-caixa"><Link to="/login" aria-label={ESCOLA}><Logo /></Link></div>
+        <div className="eh-caixa">{marca}</div>
         <div className="eh-fita" aria-hidden="true"><i /><i /><i /><i /><i /></div>
       </header>
       <main className="eh-caixa eh-grelha">
