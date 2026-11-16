@@ -1,4 +1,3 @@
-import { anoStore } from './api'
 import { pick, type Row } from './data'
 import { useList } from './hooks'
 
@@ -7,11 +6,10 @@ export const isActivo = (r: Row) => {
   return v === true || String(v).toLowerCase() === 'activo' || String(v).toLowerCase() === 'activa' || String(v).toLowerCase() === 'true'
 }
 
-/** Ano lectivo em que se trabalha (o escolhido no topo; senão o activo) e respectivos períodos de avaliação. */
+/** Ano lectivo activo e respectivos períodos de avaliação. */
 export function useAnoActivo() {
   const anos = useList('/anos-lectivos')
-  const escolhido = anoStore.get()
-  const activo = anos.rows.find((a) => escolhido && String(a.id) === escolhido) ?? anos.rows.find(isActivo) ?? anos.rows[0]
+  const activo = anos.rows.find(isActivo) ?? anos.rows[0]
   const periodos = useList(activo?.id ? `/anos-lectivos/${activo.id}/periodos` : null)
   return { anos: anos.rows, ano: activo as Row | undefined, periodos: periodos.rows, loading: anos.isLoading }
 }

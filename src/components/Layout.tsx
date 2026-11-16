@@ -4,9 +4,6 @@ import { AnimatePresence, m } from 'motion/react'
 import { useAuth } from '@/auth/AuthContext'
 import { nameOf, pick, type Row } from '@/lib/data'
 import { nomeCiclo, useCiclos } from '@/lib/ciclos'
-import { isActivo } from '@/lib/academic'
-import { anoStore } from '@/lib/api'
-import { useQueryClient } from '@tanstack/react-query'
 import { AuthImage } from './AuthImage'
 import { Pagina, T_NORMAL, T_RAPIDO } from './Motion'
 
@@ -151,37 +148,7 @@ export function Avatar({ user, size = 36 }: { user: Row | null; size?: number })
   )
 }
 
-/**
- * Ano lectivo em que se trabalha, como a empresa no Primavera: tudo o que a plataforma mostra e regista por
- * omissão passa a ser desse ano. Ponto verde = ano activo; âmbar = outro ano.
- */
-function SeletorAno() {
-  const { ciclos } = useCiclos()
-  const qc = useQueryClient()
-  const [escolhido, setEscolhido] = useState(anoStore.get)
-  if (!ciclos.length) return null
-  const activo = ciclos.find(isActivo)
-  const actual = ciclos.find((c) => String(c.id) === escolhido) ?? activo ?? ciclos[0]
-  const noActivo = !!activo && actual.id === activo.id
-  const mudar = (id: string) => {
-    // No ano activo não é preciso cabeçalho: o backend já o usa por omissão.
-    const valor = activo && String(activo.id) === id ? '' : id
-    anoStore.set(valor)
-    setEscolhido(valor)
-    qc.invalidateQueries()
-  }
-  return (
-    <label className={`ano-sel ${noActivo ? '' : 'outro'}`} title={noActivo ? 'Ano lectivo activo' : 'Está a trabalhar num ano lectivo que não é o activo'}>
-      <span className="ano-dot" aria-hidden="true" />
-      <span className="sr-only">Ano lectivo</span>
-      <select value={String(actual.id)} onChange={(e) => mudar(e.target.value)}>
-        {ciclos.map((c) => <option key={c.id} value={String(c.id)}>Ano lectivo {nomeCiclo(c)}{isActivo(c) ? ' (activo)' : ''}</option>)}
-      </select>
-    </label>
-  )
-}
-
-function Topo({ onMenu, ano }: { onMenu: () => void; ano?: boolean }) {
+function Topo({ onMenu }: { onMenu: () => void }) {
   const { user, logout } = useAuth()
   const toggleTheme = useTheme()
   return (
@@ -190,7 +157,6 @@ function Topo({ onMenu, ano }: { onMenu: () => void; ano?: boolean }) {
         <Icone n="gestao" size={22} />
       </button>
       <span className="grow" />
-      {ano && <SeletorAno />}
       <button type="button" className="topo-btn" onClick={toggleTheme} aria-label="Alternar tema claro/escuro" title="Alternar tema">
         <Icone n="tema" />
       </button>
@@ -269,7 +235,7 @@ export function Layout() {
         <NavLink to="/conta" className={nl}><Icone n="config" /> Configurações</NavLink>
       </Lado>
       <div className="corpo">
-        <Topo onMenu={menu} ano={pode('academico') || pode('cadastro') || pode('pedagogico')} />
+        <Topo onMenu={menu} />
         <main className="main" id="conteudo"><Pagina key={loc.pathname}><Outlet /></Pagina></main>
       </div>
     </div>
