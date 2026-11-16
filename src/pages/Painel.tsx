@@ -80,7 +80,7 @@ export default function Painel() {
           <div className="pd-areas">
             <Area titulo="Alunos" linhas={[
               { rotulo: 'Matriculados', valor: String(e.alunos ?? 0), nota: ocupacao == null ? undefined : `${pct(ocupacao)} dos ${e.lugares} lugares`, to: '/alunos' },
-              { rotulo: 'Turmas', valor: String(e.turmas ?? 0), to: '/turmas' },
+              { rotulo: 'Turmas', valor: String(e.turmas ?? 0), to: '/ciclos' },
               { rotulo: 'Necessidades especiais', valor: String(e.alunos_nee ?? 0), tom: e.alunos_nee ? 'warn' : undefined, to: '/alunos' },
               { rotulo: 'Pedidos por decidir', valor: String(e.pedidos_pendentes ?? 0), nota: 'dos encarregados', tom: e.pedidos_pendentes ? 'warn' : undefined, to: '/pedidos?estado=pendente' },
             ]} />

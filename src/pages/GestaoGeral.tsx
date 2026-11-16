@@ -6,7 +6,7 @@ const CARTOES: { titulo: string; texto: string; to: string; modulo: string }[] =
   { titulo: 'Sala', texto: 'Crie e edite as salas: tipo (laboratório, informática…), piso e localização.', to: '/academico?tab=salas', modulo: 'academico' },
   { titulo: 'Classe', texto: 'Defina os níveis e as classes oferecidas, com o plano curricular de cada uma.', to: '/academico?tab=classes', modulo: 'academico' },
   { titulo: 'Disciplina', texto: 'Crie as disciplinas que serão ministradas pelos docentes.', to: '/academico?tab=disciplinas', modulo: 'academico' },
-  { titulo: 'Turma', texto: 'Adicione turmas ao ano lectivo, com a capacidade e os professores de cada disciplina.', to: '/turmas', modulo: 'cadastro' },
+  { titulo: 'Turma', texto: 'Adicione turmas a cada ciclo académico, com a capacidade e os professores de cada disciplina.', to: '/ciclos', modulo: 'academico' },
   { titulo: 'Funcionários', texto: 'Professores, coordenação e pessoal da escola, com o ano de contratação.', to: '/academico?tab=funcionarios', modulo: 'academico' },
   { titulo: 'Serviços e preços', texto: 'Propina, alimentação, transporte e outros serviços, com os preços por classe.', to: '/catalogo', modulo: 'propinas' },
   { titulo: 'Definições da escola', texto: 'Dados da escola e parâmetros: capacidade das turmas, escala das notas…', to: '/definicoes', modulo: 'academico' },

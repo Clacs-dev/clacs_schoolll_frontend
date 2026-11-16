@@ -59,7 +59,7 @@ export const NAV: Grupo[] = [
   ] },
   { group: 'Pedagógico', icon: 'docente', items: [
     ['/academico', 'Registo académico', 'academico'], [CICLOS, 'Ciclos académicos', 'academico'],
-    ['/turmas', 'Turmas', 'cadastro'], ['/avaliacoes', 'Avaliações e notas', 'pedagogico'],
+    ['/avaliacoes', 'Avaliações e notas', 'pedagogico'],
     ['/pautas', 'Pautas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'],
     ['/registo-diario', 'Registo diário', 'pedagogico'],
   ] },
