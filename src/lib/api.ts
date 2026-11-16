@@ -14,6 +14,20 @@ export const tokenStore = {
   },
 }
 
+/**
+ * Ano lectivo escolhido no topo (como a empresa no Primavera). Vai em cada pedido no cabeçalho X-Ano-Lectivo e
+ * o backend usa-o em vez do ano activo. Vazio = ano activo.
+ */
+const ANO_KEY = 'clacs.ano'
+export const anoStore = {
+  get: () => {
+    try { return localStorage.getItem(ANO_KEY) || '' } catch { return '' }
+  },
+  set: (id: string) => {
+    try { id ? localStorage.setItem(ANO_KEY, id) : localStorage.removeItem(ANO_KEY) } catch { /* sem storage */ }
+  },
+}
+
 export class ApiError extends Error {
   status: number
   detail: unknown
@@ -77,6 +91,8 @@ async function raw(method: string, path: string, opts: RawOpts = {}) {
   const headers: Record<string, string> = { Accept: 'application/json', ...(opts.headers || {}) }
   const t = tokenStore.get()
   if (t && opts.auth !== false) headers.Authorization = `Bearer ${t}`
+  const ano = anoStore.get()
+  if (ano && opts.auth !== false) headers['X-Ano-Lectivo'] = ano
   let res: Response
   try {
     res = await fetch(BASE + path + qs(opts.params), { method, headers, body: opts.body ?? undefined })

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { api, ApiError, tokenStore } from '@/lib/api'
+import { anoStore, api, ApiError, tokenStore } from '@/lib/api'
 import { perfisOf, type Row } from '@/lib/data'
 
 type LoginResult = { ok: true } | { ok: false; needCode?: boolean; message: string }
@@ -84,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     tokenStore.clear()
+    anoStore.set('') // o próximo utilizador começa no ano activo
     setUser(null)
     qc.clear()
   }, [qc])

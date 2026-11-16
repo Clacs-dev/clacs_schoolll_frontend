@@ -99,6 +99,48 @@ function dataDoCiclo(c: Row) {
   return d
 }
 
+/** Mapa de horário da turma: uma linha por intervalo de horas, uma coluna por dia; cada célula com a disciplina e o professor. */
+function MapaHorario({ rows, turma, onRetirar }: { rows: Row[]; turma: string; onRetirar: (r: Row) => void }) {
+  const discs = useList('/disciplinas')
+  const sigla = (r: Row) => {
+    const d = discs.rows.find((x) => x.id === r.disciplina_id)
+    return String(pick(d, 'sigla') || r.disciplina || '').toUpperCase()
+  }
+  const primeiroNome = (n: unknown) => String(n ?? '').trim().split(/\s+/)[0] ?? ''
+  const dias = DIAS.filter((d) => d.value <= 5 || rows.some((r) => r.dia_semana === d.value))
+  const faixas = [...new Map(rows.map((r) => [`${hora(r.hora_inicio)}–${hora(r.hora_fim)}`, r])).keys()].sort()
+  const celula = (faixa: string, dia: number) => rows.filter((r) => r.dia_semana === dia && `${hora(r.hora_inicio)}–${hora(r.hora_fim)}` === faixa)
+
+  return (
+    <div className="mapa-horario">
+      <table>
+        <caption>Horário da turma {turma}</caption>
+        <thead>
+          <tr><th scope="col">Horas / dias</th>{dias.map((d) => <th key={d.value} scope="col">{d.label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {faixas.map((f) => (
+            <tr key={f}>
+              <th scope="row">{f}</th>
+              {dias.map((d) => (
+                <td key={d.value}>
+                  {celula(f, d.value).map((r) => (
+                    <button type="button" key={r.id} className="mh-aula" title={`${r.disciplina}${r.professor ? ` — ${r.professor}` : ''} (clique para retirar)`} onClick={() => onRetirar(r)}>
+                      <b>{sigla(r)}</b>
+                      <span>{primeiroNome(r.professor).toUpperCase() || '—'}</span>
+                    </button>
+                  ))}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="note" style={{ margin: '8px 0 0' }}>Clique numa aula para a retirar do horário. Passe o rato por cima para ver o nome completo.</p>
+    </div>
+  )
+}
+
 function Horarios({ c }: { c: Row }) {
   const confirm = useConfirm()
   const turmas = useList('/turmas', { ano_id: c.id })
@@ -132,19 +174,12 @@ function Horarios({ c }: { c: Row }) {
       {!turmas.isLoading && !turmas.rows.length ? <Empty>Crie primeiro as turmas deste ciclo.</Empty>
         : !turma ? <Empty>Escolha uma turma para ver o horário.</Empty>
           : (
-            <Table rows={q.rows} loading={q.isLoading} error={q.error} pageSize={0} empty="Esta turma ainda não tem horário."
-              cols={[
-                { h: 'Dia', render: (r) => DIAS.find((d) => d.value === r.dia_semana)?.label ?? r.dia_semana },
-                { h: 'Tempo', render: (r) => `${r.tempo}.º` },
-                { h: 'Horas', render: (r) => `${hora(r.hora_inicio)}–${hora(r.hora_fim)}` },
-                { h: 'Disciplina', k: 'disciplina' },
-                { h: 'Professor', k: 'professor' },
-                { h: '', render: (r) => (
-                  <Btn variant="link" onClick={async () => {
-                    if (await confirm({ title: 'Retirar do horário', text: `Retirar ${r.disciplina} (${DIAS.find((d) => d.value === r.dia_semana)?.label}, ${r.tempo}.º tempo) do horário? Fica no histórico.`, yes: 'Retirar' })) terminar.mutate(r.id)
-                  }}>Retirar</Btn>
-                ) },
-              ]} />
+            q.isLoading ? <Loading /> : !q.rows.length ? <Empty>Esta turma ainda não tem horário.</Empty> : (
+              <MapaHorario rows={q.rows} turma={String(pick(turmas.rows.find((t) => String(t.id) === turma), 'designacao') ?? '')}
+                onRetirar={async (r) => {
+                  if (await confirm({ title: 'Retirar do horário', text: `Retirar ${r.disciplina} (${DIAS.find((d) => d.value === r.dia_semana)?.label}, ${hora(r.hora_inicio)}–${hora(r.hora_fim)}) do horário? Fica no histórico.`, yes: 'Retirar' })) terminar.mutate(r.id)
+                }} />
+            )
           )}
       {novo && <FormDialog title="Novo tempo lectivo" fields={campos} onClose={() => setNovo(false)} onSubmit={(p) => criar.mutateAsync(p)} />}
     </section>
