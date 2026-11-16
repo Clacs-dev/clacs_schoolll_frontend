@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { usePode } from '@/components/Layout'
 
 const CARTOES: { titulo: string; texto: string; to: string; modulo: string }[] = [
-  { titulo: 'Período lectivo', texto: 'Defina o ano lectivo actual e os trimestres, edite-os ou feche o ano.', to: '/academico?tab=anos', modulo: 'academico' },
+  { titulo: 'Período lectivo', texto: 'Defina o ano lectivo actual e os trimestres, edite-os ou feche o ano.', to: '/ciclos', modulo: 'academico' },
   { titulo: 'Sala', texto: 'Crie e edite as salas: tipo (laboratório, informática…), piso e localização.', to: '/academico?tab=salas', modulo: 'academico' },
   { titulo: 'Classe', texto: 'Defina os níveis e as classes oferecidas, com o plano curricular de cada uma.', to: '/academico?tab=classes', modulo: 'academico' },
   { titulo: 'Disciplina', texto: 'Crie as disciplinas que serão ministradas pelos docentes.', to: '/academico?tab=disciplinas', modulo: 'academico' },

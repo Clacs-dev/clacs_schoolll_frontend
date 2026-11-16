@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Navigate, useSearchParams } from 'react-router'
 import { FormDialog, type FieldDef } from '@/components/FormDialog'
-import { Modal, ResultDialog, useConfirm } from '@/components/Modal'
+import { Modal, ResultDialog } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
-import { Btn, Estado, Loading, PageHead, Select, Tabs } from '@/components/ui'
+import { Btn, Empty, Estado, Loading, PageHead, Select, Tabs } from '@/components/ui'
 import { api } from '@/lib/api'
-import { perfisOf, pick, type Row } from '@/lib/data'
-import { TIPOS_SALA, disciplinaOptions, isActivo, useAnoActivo } from '@/lib/academic'
+import { num, perfisOf, pick, type Row } from '@/lib/data'
+import { TIPOS_SALA, disciplinaOptions } from '@/lib/academic'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 
-type Tab = 'anos' | 'niveis' | 'classes' | 'disciplinas' | 'salas' | 'funcionarios'
+type Tab = 'classes' | 'salas' | 'professores' | 'disciplinas' | 'programas' | 'niveis' | 'funcionarios'
 
 /* ------------ Ano lectivo ------------ */
 const periodoFields: FieldDef[] = [
@@ -21,7 +21,7 @@ const periodoFields: FieldDef[] = [
   { name: 'data_fim', label: 'Fim', type: 'date', required: true },
 ]
 
-function Periodos({ ano, onClose }: { ano: Row; onClose: () => void }) {
+export function Periodos({ ano, onClose }: { ano: Row; onClose: () => void }) {
   const q = useList(`/anos-lectivos/${ano.id}/periodos`)
   const [novo, setNovo] = useState(false)
   const criar = useAct((p: Row) => api.post(`/anos-lectivos/${ano.id}/periodos`, p), { invalidate: [`/anos-lectivos/${ano.id}`], ok: 'Período criado.' })
@@ -41,7 +41,7 @@ function Periodos({ ano, onClose }: { ano: Row; onClose: () => void }) {
   )
 }
 
-function Resultados({ ano, onClose }: { ano: Row; onClose: () => void }) {
+export function Resultados({ ano, onClose }: { ano: Row; onClose: () => void }) {
   const q = useList(`/anos-lectivos/${ano.id}/resultados`)
   return (
     <Modal title={`Resultados finais — ${pick(ano, 'designacao')}`} size="xl" onClose={onClose}>
@@ -50,7 +50,7 @@ function Resultados({ ano, onClose }: { ano: Row; onClose: () => void }) {
   )
 }
 
-function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onClose: () => void }) {
+export function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onClose: () => void }) {
   const [de, setDe] = useState('')
   const [copiar, setCopiar] = useState(true)
   const [map, setMap] = useState<Record<string, string>>({})
@@ -87,56 +87,66 @@ function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onClose: (
   )
 }
 
-function Anos() {
-  const confirm = useConfirm()
-  const { anos } = useAnoActivo()
-  const [dlg, setDlg] = useState<{ k: 'per' | 'res' | 'trans' | 'fecho'; a: Row } | null>(null)
-  const [fecho, setFecho] = useState<unknown>()
-  const activar = useAct((id: number) => api.post(`/anos-lectivos/${id}/activar`), { invalidate: ['/anos-lectivos', '/turmas', '/matriculas'], ok: 'Ano lectivo activado.' })
-  const simular = useAct((v: { id: number; simular: boolean }) => api.post(`/anos-lectivos/${v.id}/fechar`, undefined, { simular: v.simular }), {
-    invalidate: ['/anos-lectivos'], silent: true, onDone: (r, v) => setFecho({ ...r, _simulacao: v.simular }),
-  })
+/* ------------ Programas das disciplinas ------------ */
+const TRIMESTRES = [{ value: 1, label: '1.º trimestre' }, { value: 2, label: '2.º trimestre' }, { value: 3, label: '3.º trimestre' }]
+const unidadeFields: FieldDef[] = [
+  { name: 'titulo', label: 'Unidade temática', required: true, wide: true, placeholder: 'Ex.: Números naturais' },
+  { name: 'ordem', label: 'Ordem', type: 'number', min: 1, required: true },
+  { name: 'trimestre', label: 'Trimestre', type: 'select', options: TRIMESTRES },
+  { name: 'tempos_previstos', label: 'Tempos previstos', type: 'number', min: 1, hint: 'N.º de tempos lectivos' },
+  { name: 'objectivos', label: 'Objectivos', type: 'textarea', wide: true },
+  { name: 'conteudos', label: 'Conteúdos', type: 'textarea', wide: true },
+]
+
+function Programas() {
+  const [classe, setClasse] = useState('')
+  const [disciplina, setDisciplina] = useState('')
+  const classes = useList('/classes')
+  const plano = useList(classe ? `/classes/${classe}/disciplinas` : null)
+  const todas = useList('/disciplinas')
+  // Disciplinas do plano curricular da classe; sem plano, todas as disciplinas da escola.
+  const discs = plano.rows.length ? plano.rows : todas.rows
+  const params = { classe_id: classe, disciplina_id: disciplina }
+  const q = useList(classe && disciplina ? '/programas' : null, params)
+  const total = q.rows.reduce((s, r) => s + num(r.tempos_previstos), 0)
+  const carga = plano.rows.find((d) => String(d.id) === disciplina)?.carga_horaria
 
   return (
     <>
-      <Resource
-        path="/anos-lectivos"
-        createLabel="Novo ano lectivo"
-        createFields={[
-          { name: 'designacao', label: 'Designação', required: true, placeholder: '2027/2028' },
-          { name: 'data_inicio', label: 'Início', type: 'date', required: true },
-          { name: 'data_fim', label: 'Fim', type: 'date', required: true },
-          { name: 'criar_trimestres', label: 'Períodos', type: 'checkbox', hint: 'Criar os 3 trimestres automaticamente', default: true },
-        ]}
-        hint="Fechar o ano calcula a média final e a situação de cada aluno. Use primeiro «Simular» para ver o resultado sem gravar."
-        editFields={[
-          { name: 'designacao', label: 'Designação', required: true },
-          { name: 'data_inicio', label: 'Início', type: 'date', required: true },
-          { name: 'data_fim', label: 'Fim', type: 'date', required: true },
-        ]}
-        editPath={(r) => `/anos-lectivos/${r.id}`}
-        deletePath={(r) => `/anos-lectivos/${r.id}`}
-        cols={[
-          { h: 'Ano lectivo', k: ['designacao', 'nome'] },
-          { h: 'Início', render: (r) => dataPT(pick(r, 'data_inicio')) },
-          { h: 'Fim', render: (r) => dataPT(pick(r, 'data_fim')) },
-          { h: 'Estado', render: (r) => <Estado v={isActivo(r) ? 'activo' : pick(r, 'estado') ?? 'encerrado'} text={isActivo(r) ? 'Activo' : label(pick(r, 'estado') ?? 'encerrado')} /> },
-        ]}
-        rowActions={(a) => (
-          <>
-            {!isActivo(a) && <Btn variant="link" onClick={() => activar.mutate(a.id)}>Activar</Btn>}
-            <Btn variant="link" onClick={() => setDlg({ k: 'per', a })}>Períodos</Btn>
-            <Btn variant="link" onClick={() => simular.mutate({ id: a.id, simular: true })}>Simular fecho</Btn>
-            <Btn variant="link" onClick={async () => { if (await confirm({ title: 'Fechar ano lectivo', text: `Gravar as médias finais e a situação dos alunos de ${pick(a, 'designacao')}?`, yes: 'Fechar ano' })) simular.mutate({ id: a.id, simular: false }) }}>Fechar ano</Btn>
-            <Btn variant="link" onClick={() => setDlg({ k: 'res', a })}>Resultados</Btn>
-            <Btn variant="link" onClick={() => setDlg({ k: 'trans', a })}>Transitar para este ano</Btn>
-          </>
-        )}
-      />
-      {dlg?.k === 'per' && <Periodos ano={dlg.a} onClose={() => setDlg(null)} />}
-      {dlg?.k === 'res' && <Resultados ano={dlg.a} onClose={() => setDlg(null)} />}
-      {dlg?.k === 'trans' && <Transitar novo={dlg.a} anos={anos} onClose={() => setDlg(null)} />}
-      {fecho !== undefined && <ResultDialog title={(fecho as Row)?._simulacao ? 'Simulação do fecho do ano (nada foi gravado)' : 'Ano fechado'} data={fecho} onClose={() => setFecho(undefined)} />}
+      <div className="toolbar">
+        <Select label="Classe" value={classe} onChange={(v) => { setClasse(v); setDisciplina('') }} placeholder="Escolha a classe"
+          options={classes.rows.map((c) => ({ value: c.id, label: String(pick(c, 'designacao', 'nome')) }))} />
+        <Select label="Disciplina" value={disciplina} onChange={setDisciplina} placeholder={classe ? 'Escolha a disciplina' : 'Escolha primeiro a classe'}
+          options={classe ? discs.map((d) => ({ value: d.id, label: String(pick(d, 'nome', 'designacao')) })) : []} />
+      </div>
+      {!(classe && disciplina) ? <Empty>Escolha a classe e a disciplina para ver e criar o programa.</Empty> : (
+        <Resource
+          path="/programas"
+          params={params}
+          invalidate={['/programas']}
+          crud="/programas"
+          createLabel="Nova unidade"
+          createFields={unidadeFields}
+          createInitial={{ ordem: q.rows.length + 1 }}
+          beforeCreate={(p) => ({ ...p, classe_id: Number(classe), disciplina_id: Number(disciplina) })}
+          deleteName={(r) => String(r.titulo)}
+          pageSize={0}
+          hint={<>{q.rows.length} unidade(s){total ? ` · ${total} tempos previstos` : ''}{carga ? ` · carga horária da disciplina: ${carga} tempos por semana` : ''}. Clique numa unidade para ver os objectivos e conteúdos.</>}
+          empty="Esta disciplina ainda não tem programa nesta classe."
+          expand={(r) => (
+            <div style={{ display: 'grid', gap: 8, whiteSpace: 'pre-wrap' }}>
+              <div><b>Objectivos</b><br />{r.objectivos || '—'}</div>
+              <div><b>Conteúdos</b><br />{r.conteudos || '—'}</div>
+            </div>
+          )}
+          cols={[
+            { h: 'N.º', k: 'ordem' },
+            { h: 'Unidade temática', k: 'titulo' },
+            { h: 'Trimestre', render: (r) => (r.trimestre ? `${r.trimestre}.º` : '—') },
+            { h: 'Tempos', render: (r) => r.tempos_previstos ?? '—' },
+          ]}
+        />
+      )}
     </>
   )
 }
@@ -196,15 +206,26 @@ const disciplinaFields: FieldDef[] = [{ name: 'nome', label: 'Nome', required: t
 
 export default function Academico() {
   const [sp, setSp] = useSearchParams()
-  const tab = (sp.get('tab') as Tab) || 'anos'
+  const pedido = sp.get('tab')
+  // Endereços antigos: os anos lectivos passaram para Ciclos académicos.
+  const tab: Tab = pedido === 'anos' || !pedido ? 'classes' : (pedido as Tab)
   const setTab = (t: Tab) => setSp({ tab: t }, { replace: true })
   const [plano, setPlano] = useState<Row | null>(null)
+  if (pedido === 'anos') return <Navigate to="/ciclos" replace />
   return (
     <>
-      <PageHead title="Estrutura académica" sub="Anos lectivos, níveis, classes, disciplinas, salas e funcionários." />
-      <Tabs<Tab> value={tab} onChange={setTab} tabs={[['anos', 'Anos lectivos'], ['niveis', 'Níveis'], ['classes', 'Classes'], ['disciplinas', 'Disciplinas'], ['salas', 'Salas'], ['funcionarios', 'Funcionários']]} />
+      <PageHead title="Registo académico" sub="Classes, salas, professores, disciplinas e programas das disciplinas." />
+      <Tabs<Tab> value={tab} onChange={setTab} tabs={[['classes', 'Classes'], ['salas', 'Salas'], ['professores', 'Professores'], ['disciplinas', 'Disciplinas'], ['programas', 'Programas das disciplinas'], ['niveis', 'Níveis de ensino'], ['funcionarios', 'Outros funcionários']]} />
 
-      {tab === 'anos' && <Anos />}
+      {tab === 'programas' && <Programas />}
+      {tab === 'professores' && (
+        <Resource path="/funcionarios" params={{ cargo: 'professor' }} invalidate={['/funcionarios']} search createLabel="Novo professor"
+          createFields={funcionarioFields.map((f) => (f.name === 'cargo' ? { ...f, default: 'professor' } : f))}
+          editFields={[...funcionarioFields, { name: 'activo', label: 'Estado', type: 'checkbox', hint: 'Professor activo', default: true }]}
+          editPath={(r) => `/funcionarios/${r.id}`} deletePath={(r) => `/funcionarios/${r.id}`}
+          empty="Ainda não há professores registados."
+          cols={[{ h: 'Nome', k: ['nome_completo', 'nome'] }, { h: 'Contratado em', k: 'ano_contratacao' }, { h: 'Telefone', k: 'telefone' }, { h: 'E-mail', k: 'email' }, { h: 'Estado', render: (r) => <Estado v={pick(r, 'activo') === false ? 'inactivo' : 'activo'} /> }]} />
+      )}
       {tab === 'niveis' && (
         <Resource path="/niveis" createLabel="Novo nível" createFields={nivelFields} editFields={nivelFields}
           editPath={(r) => `/niveis/${r.id}`} deletePath={(r) => `/niveis/${r.id}`}
@@ -237,7 +258,8 @@ export default function Academico() {
           ]} />
       )}
       {tab === 'funcionarios' && (
-        <Resource path="/funcionarios" search createLabel="Novo funcionário" createFields={funcionarioFields}
+        <Resource path="/funcionarios" filter={(r) => r.cargo !== 'professor'} search createLabel="Novo funcionário"
+          createFields={funcionarioFields.map((f) => (f.name === 'cargo' ? { ...f, default: 'secretaria' } : f))}
           editFields={[...funcionarioFields, { name: 'activo', label: 'Estado', type: 'checkbox', hint: 'Funcionário activo', default: true }]} editPath={(r) => `/funcionarios/${r.id}`}
           deletePath={(r) => `/funcionarios/${r.id}`}
           cols={[{ h: 'Nome', k: ['nome_completo', 'nome'] }, { h: 'Cargo', render: (r) => label(pick(r, 'cargo')) }, { h: 'Contratado em', k: 'ano_contratacao' }, { h: 'Telefone', k: 'telefone' }, { h: 'E-mail', k: 'email' }, { h: 'Estado', render: (r) => <Estado v={pick(r, 'activo') === false ? 'inactivo' : 'activo'} /> }]} />

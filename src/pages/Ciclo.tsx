@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { FormDialog, type FieldDef } from '@/components/FormDialog'
-import { useConfirm } from '@/components/Modal'
+import { ResultDialog, useConfirm } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
 import { Btn, Card, Empty, Estado, Loading, PageHead, Select, Tabs, Tag } from '@/components/ui'
 import { api } from '@/lib/api'
 import { num, pick, type Row } from '@/lib/data'
-import { disciplinaOptions, funcionarioOptions, salaOptions } from '@/lib/academic'
+import { disciplinaOptions, funcionarioOptions, isActivo, salaOptions } from '@/lib/academic'
 import { estadoCiclo, nomeCiclo, useCiclos } from '@/lib/ciclos'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { Atribuicoes, comuns, createFields as turmaCreateFields } from './Turmas'
+import { Periodos, Resultados, Transitar } from './Academico'
 
 type Tab = 'plano' | 'turmas' | 'horarios' | 'cargas'
 
@@ -187,6 +188,35 @@ function Cargas({ c }: { c: Row }) {
   )
 }
 
+/* ------------ Gestão do ciclo (antes em "Anos lectivos") ------------ */
+function AccoesCiclo({ c, ciclos }: { c: Row; ciclos: Row[] }) {
+  const confirm = useConfirm()
+  const [dlg, setDlg] = useState<'per' | 'res' | 'trans' | null>(null)
+  const [fecho, setFecho] = useState<unknown>()
+  const activar = useAct(() => api.post(`/anos-lectivos/${c.id}/activar`), { invalidate: ['/anos-lectivos', '/turmas', '/matriculas'], ok: 'Ciclo activado.' })
+  const fechar = useAct((simular: boolean) => api.post(`/anos-lectivos/${c.id}/fechar`, undefined, { simular }), {
+    invalidate: ['/anos-lectivos'], silent: true, onDone: (r, simular) => setFecho({ ...r, _simulacao: simular }),
+  })
+  return (
+    <>
+      <div className="row-a" style={{ flexWrap: 'wrap' }}>
+        {!isActivo(c) && <Btn variant="ghost" size="sm" busy={activar.isPending} onClick={() => activar.mutate()}>Activar</Btn>}
+        <Btn variant="ghost" size="sm" onClick={() => setDlg('per')}>Períodos</Btn>
+        <Btn variant="ghost" size="sm" onClick={() => setDlg('trans')}>Transitar alunos</Btn>
+        <Btn variant="ghost" size="sm" busy={fechar.isPending} onClick={() => fechar.mutate(true)}>Simular fecho</Btn>
+        <Btn variant="ghost" size="sm" onClick={async () => {
+          if (await confirm({ title: 'Fechar ciclo', text: `Gravar as médias finais e a situação dos alunos do ciclo ${nomeCiclo(c)}?`, yes: 'Fechar ciclo' })) fechar.mutate(false)
+        }}>Fechar ciclo</Btn>
+        <Btn variant="ghost" size="sm" onClick={() => setDlg('res')}>Resultados</Btn>
+      </div>
+      {dlg === 'per' && <Periodos ano={c} onClose={() => setDlg(null)} />}
+      {dlg === 'res' && <Resultados ano={c} onClose={() => setDlg(null)} />}
+      {dlg === 'trans' && <Transitar novo={c} anos={ciclos} onClose={() => setDlg(null)} />}
+      {fecho !== undefined && <ResultDialog title={(fecho as Row)?._simulacao ? 'Simulação do fecho do ciclo (nada foi gravado)' : 'Ciclo fechado'} data={fecho} onClose={() => setFecho(undefined)} />}
+    </>
+  )
+}
+
 /* ------------ Página do ciclo ------------ */
 export default function Ciclo() {
   const { id } = useParams()
@@ -203,6 +233,7 @@ export default function Ciclo() {
       <PageHead
         title={`Ciclo ${nomeCiclo(c)}`}
         sub={<>{dataPT(pick(c, 'data_inicio'))} a {dataPT(pick(c, 'data_fim'))} · <Estado v={estado} text={label(estado)} /></>}
+        actions={<AccoesCiclo key={c.id} c={c} ciclos={ciclos} />}
       />
       <Tabs<Tab> value={tab} onChange={(t) => setSp({ tab: t }, { replace: true })}
         tabs={[['plano', 'Plano de actividade'], ['turmas', 'Turmas'], ['horarios', 'Horários'], ['cargas', 'Cargas horárias']]} />
