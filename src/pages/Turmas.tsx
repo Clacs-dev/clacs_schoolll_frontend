@@ -10,20 +10,20 @@ import { PERIODOS_DIA, classeOptions, disciplinaOptions, funcionarioOptions, sal
 import { label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 
-const comuns: FieldDef[] = [
+export const comuns: FieldDef[] = [
   { name: 'designacao', label: 'Designação', required: true, placeholder: 'Ex.: 7.ª A' },
   { name: 'sala_id', label: 'Sala', type: 'select', options: salaOptions },
   { name: 'periodo_dia', label: 'Período do dia', type: 'select', options: PERIODOS_DIA, default: 'manha', required: true },
   { name: 'director_turma_id', label: 'Director de turma', type: 'select', options: { ...funcionarioOptions, filter: (r) => !r.cargo || ['professor', 'coordenador', 'director'].includes(String(r.cargo)) } },
   { name: 'capacidade', label: 'Capacidade (alunos)', type: 'number', min: 1, hint: 'Em branco: o máximo por omissão da escola (7, em Definições)' },
 ]
-const createFields: FieldDef[] = [
+export const createFields: FieldDef[] = [
   comuns[0],
   { name: 'classe_id', label: 'Classe', type: 'select', options: classeOptions, required: true },
   ...comuns.slice(1),
 ]
 
-function Atribuicoes({ t, onClose }: { t: Row; onClose: () => void }) {
+export function Atribuicoes({ t, onClose }: { t: Row; onClose: () => void }) {
   const q = useList(`/turmas/${t.id}/atribuicoes`)
   const [vals, setVals] = useState<Row>(() => initialValues(fields, {}))
   const atribuir = useAct((p: Row) => api.put(`/turmas/${t.id}/atribuicoes`, p), { invalidate: [`/turmas/${t.id}`], ok: 'Professor atribuído.', onDone: () => setVals(initialValues(fields, {})) })

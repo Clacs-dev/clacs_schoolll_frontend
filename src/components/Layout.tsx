@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { AnimatePresence, m } from 'motion/react'
 import { useAuth } from '@/auth/AuthContext'
 import { nameOf, pick, type Row } from '@/lib/data'
+import { nomeCiclo, useCiclos } from '@/lib/ciclos'
 import { AuthImage } from './AuthImage'
 import { Pagina, T_NORMAL, T_RAPIDO } from './Motion'
 
@@ -32,6 +33,23 @@ export const Icone = ({ n, size = 18 }: { n: string; size?: number }) => (
 type Item = [string, string, string?]
 type Grupo = { group: string; icon: string; items: Item[] }
 
+/** Entrada "Ciclos académicos": por baixo dela, o menu mostra um submenu com cada ciclo criado. */
+const CICLOS = '/ciclos'
+
+/** Submenu com os ciclos académicos (anos lectivos), do mais recente para o mais antigo. */
+function SubCiclos({ pathname }: { pathname: string }) {
+  const { ciclos } = useCiclos()
+  if (!ciclos.length) return null
+  return (
+    <div className="nav-sub2">
+      {ciclos.map((c) => {
+        const to = `${CICLOS}/${c.id}`
+        return <NavLink key={c.id} to={to} className={() => `nl ${pathname === to ? 'active' : ''}`}>{nomeCiclo(c)}</NavLink>
+      })}
+    </div>
+  )
+}
+
 // Organizado pelos serviços da escola. Um mesmo ecrã com separadores (ex.: /academico) pode aparecer em
 // vários grupos, cada um a abrir o separador desse serviço (?tab=…).
 export const NAV: Grupo[] = [
@@ -40,7 +58,8 @@ export const NAV: Grupo[] = [
     ['/relatorios', 'Relatórios', 'painel'], ['/assistente', 'Assistente', 'painel'],
   ] },
   { group: 'Pedagógico', icon: 'docente', items: [
-    ['/academico?tab=anos', 'Registo académico', 'academico'], ['/turmas', 'Turmas', 'cadastro'],
+    ['/academico?tab=anos', 'Registo académico', 'academico'], [CICLOS, 'Ciclos académicos', 'academico'],
+    ['/turmas', 'Turmas', 'cadastro'],
     ['/academico?tab=classes', 'Classes e disciplinas', 'academico'], ['/avaliacoes', 'Avaliações e notas', 'pedagogico'],
     ['/pautas', 'Pautas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'],
     ['/registo-diario', 'Registo diário', 'pedagogico'],
@@ -202,8 +221,11 @@ export function Layout() {
                   <m.nav aria-label={g.group} className="nav-sub" key="sub"
                     initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={T_NORMAL}>
                     {itens.map(([to, l]) => (
-                      // className em função: o NavLink não junta o "active" dele, que só olha para o caminho
-                      <NavLink key={to} to={to} className={() => `nl ${activo(to, loc.pathname, loc.search) ? 'active' : ''}`}>{l}</NavLink>
+                      <Fragment key={to}>
+                        {/* className em função: o NavLink não junta o "active" dele, que só olha para o caminho */}
+                        <NavLink to={to} className={() => `nl ${(to === CICLOS ? loc.pathname === CICLOS : activo(to, loc.pathname, loc.search)) ? 'active' : ''}`}>{l}</NavLink>
+                        {to === CICLOS && <SubCiclos pathname={loc.pathname} />}
+                      </Fragment>
                     ))}
                   </m.nav>
                 )}
