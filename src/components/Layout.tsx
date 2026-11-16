@@ -40,14 +40,10 @@ export const NAV: Grupo[] = [
     ['/relatorios', 'Relatórios', 'painel'], ['/assistente', 'Assistente', 'painel'],
   ] },
   { group: 'Pedagógico', icon: 'docente', items: [
-    ['/academico?tab=anos', 'Calendário escolar', 'academico'], ['/turmas', 'Turmas', 'cadastro'],
+    ['/academico?tab=anos', 'Registo académico', 'academico'], ['/turmas', 'Turmas', 'cadastro'],
     ['/academico?tab=classes', 'Classes e disciplinas', 'academico'], ['/avaliacoes', 'Avaliações e notas', 'pedagogico'],
     ['/pautas', 'Pautas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'],
     ['/registo-diario', 'Registo diário', 'pedagogico'],
-  ] },
-  { group: 'Académico', icon: 'academico', items: [
-    ['/academico?tab=funcionarios', 'Professores', 'academico'], ['/avaliacao-professores', 'Desempenho dos professores', 'painel'],
-    ['/pedagogico/alunos', 'Acompanhamento dos alunos', 'pedagogico'],
   ] },
   { group: 'Secretaria', icon: 'secretaria', items: [
     ['/candidaturas', 'Candidaturas', 'candidaturas'], ['/matriculas', 'Matrículas e renovações', 'cadastro'],
