@@ -37,6 +37,8 @@ export type FieldDef = {
   showIf?: (v: Row) => boolean
   /** Mantém o valor como texto (decimais enviados como string). */
   asString?: boolean
+  /** Só leitura (ex.: valor calculado pelo formulário a partir de outros campos). */
+  readOnly?: boolean
 }
 
 export function useOptions(src: Opt[] | Source | undefined): { opts: Opt[]; loading: boolean } {
@@ -150,6 +152,8 @@ export function FormFields({ fields, values, set }: { fields: FieldDef[]; values
               min={f.min}
               max={f.max}
               autoComplete={t === 'password' ? 'new-password' : 'off'}
+              readOnly={f.readOnly}
+              tabIndex={f.readOnly ? -1 : undefined}
               value={v ?? ''}
               onChange={(e) => set(f.name, e.target.value)}
             />
@@ -178,12 +182,17 @@ type Props = {
   onClose: () => void
   size?: 'sm' | 'md' | 'lg'
   intro?: ReactNode
+  /** Recalcula valores quando um campo muda (ex.: hora de fim = início + duração do tempo). */
+  derivar?: (valores: Row, campo: string) => Row
 }
 
-export function FormDialog({ title, fields, initial, submitLabel = 'Guardar', onSubmit, onClose, size = 'md', intro }: Props) {
+export function FormDialog({ title, fields, initial, submitLabel = 'Guardar', onSubmit, onClose, size = 'md', intro, derivar }: Props) {
   const [values, setValues] = useState<Row>(() => initialValues(fields, initial))
   const [busy, setBusy] = useState(false)
-  const set = (n: string, v: any) => setValues((s) => ({ ...s, [n]: v }))
+  const set = (n: string, v: any) => setValues((s) => {
+    const novo = { ...s, [n]: v }
+    return derivar ? derivar(novo, n) : novo
+  })
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()

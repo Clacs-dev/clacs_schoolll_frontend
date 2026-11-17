@@ -11,7 +11,7 @@ import { TIPOS_SALA, disciplinaOptions } from '@/lib/academic'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 
-type Tab = 'niveis' | 'classes' | 'disciplinas' | 'programas' | 'salas' | 'professores' | 'funcionarios'
+type Tab = 'niveis' | 'classes' | 'disciplinas' | 'programas' | 'salas' | 'tempos' | 'professores' | 'funcionarios'
 
 /* ------------ Ordem (posição na lista) ------------
    Ao criar é automática (a seguinte). Ao editar pode mudar-se: se outro registo já tiver essa ordem, os dois trocam. */
@@ -217,6 +217,11 @@ const classeFields: FieldDef[] = [
   { name: 'designacao', label: 'Designação', required: true, placeholder: '7.ª Classe' },
   campoOrdem,
 ]
+const tempoFields: FieldDef[] = [
+  { name: 'designacao', label: 'Nome', placeholder: 'Em branco: «1.º tempo», «2.º tempo»…' },
+  { name: 'duracao_minutos', label: 'Duração (minutos)', type: 'number', min: 5, max: 240, default: 45, required: true },
+  campoOrdem,
+]
 const disciplinaFields: FieldDef[] = [{ name: 'nome', label: 'Nome', required: true }, { name: 'sigla', label: 'Sigla' }]
 
 export default function Academico() {
@@ -228,11 +233,12 @@ export default function Academico() {
   const [plano, setPlano] = useState<Row | null>(null)
   const niveisQ = useList(tab === 'niveis' ? '/niveis' : null)
   const classesQ = useList(tab === 'classes' ? '/classes' : null)
+  const temposQ = useList(tab === 'tempos' ? '/tempos-lectivos' : null)
   if (pedido === 'anos') return <Navigate to="/ciclos" replace />
   return (
     <>
-      <PageHead title="Registo académico" sub="Pela ordem em que se preenche: níveis de ensino, classes, disciplinas, programas, salas e professores." />
-      <Tabs<Tab> value={tab} onChange={setTab} tabs={[['niveis', 'Níveis de ensino'], ['classes', 'Classes'], ['disciplinas', 'Disciplinas'], ['programas', 'Programas das disciplinas'], ['salas', 'Salas'], ['professores', 'Professores'], ['funcionarios', 'Outros funcionários']]} />
+      <PageHead title="Registo académico" sub="Pela ordem em que se preenche: níveis de ensino, classes, disciplinas, programas, salas, tempos lectivos e professores." />
+      <Tabs<Tab> value={tab} onChange={setTab} tabs={[['niveis', 'Níveis de ensino'], ['classes', 'Classes'], ['disciplinas', 'Disciplinas'], ['programas', 'Programas das disciplinas'], ['salas', 'Salas'], ['tempos', 'Tempos lectivos'], ['professores', 'Professores'], ['funcionarios', 'Outros funcionários']]} />
 
       {tab === 'programas' && <Programas />}
       {tab === 'professores' && (
@@ -262,6 +268,14 @@ export default function Academico() {
         <Resource path="/disciplinas" search createLabel="Nova disciplina" createFields={disciplinaFields} editFields={disciplinaFields}
           editPath={(r) => `/disciplinas/${r.id}`} deletePath={(r) => `/disciplinas/${r.id}`}
           cols={[{ h: 'Disciplina', k: ['nome', 'designacao'] }, { h: 'Sigla', k: 'sigla' }]} />
+      )}
+      {tab === 'tempos' && (
+        <Resource path="/tempos-lectivos" createLabel="Novo tempo lectivo" createFields={semOrdem(tempoFields)} editFields={tempoFields}
+          editPath={(r) => `/tempos-lectivos/${r.id}`} deletePath={(r) => `/tempos-lectivos/${r.id}`}
+          hint="Os tempos do dia e a duração de cada um. No horário escolhe-se o tempo e a hora de fim é calculada (início + duração)."
+          empty="Ainda não há tempos lectivos. Crie o 1.º tempo (por omissão, 45 minutos)."
+          cols={[{ h: 'Ordem', render: celOrdem(repetidas(temposQ.rows)) }, { h: 'Tempo', k: 'designacao' },
+            { h: 'Duração', render: (r) => `${r.duracao_minutos} min` }]} />
       )}
       {tab === 'salas' && (
         <Resource path="/salas" search createLabel="Nova sala" createFields={salaFields}

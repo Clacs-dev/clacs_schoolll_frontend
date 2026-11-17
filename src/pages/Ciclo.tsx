@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { FormDialog, type FieldDef } from '@/components/FormDialog'
-import { ResultDialog, useConfirm } from '@/components/Modal'
+import { Modal, ResultDialog, useConfirm } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
 import { Btn, Card, Empty, Loading, PageHead, Select, Tag } from '@/components/ui'
@@ -98,7 +98,7 @@ function dataDoCiclo(c: Row) {
 }
 
 /** Mapa de horário da turma: uma linha por intervalo de horas, uma coluna por dia; cada célula com a disciplina e o professor. */
-function MapaHorario({ rows, turma, onRetirar }: { rows: Row[]; turma: string; onRetirar: (r: Row) => void }) {
+function MapaHorario({ rows, turma, onAula }: { rows: Row[]; turma: string; onAula: (r: Row) => void }) {
   const discs = useList('/disciplinas')
   const sigla = (r: Row) => {
     const d = discs.rows.find((x) => x.id === r.disciplina_id)
@@ -123,7 +123,7 @@ function MapaHorario({ rows, turma, onRetirar }: { rows: Row[]; turma: string; o
               {dias.map((d) => (
                 <td key={d.value}>
                   {celula(f, d.value).map((r) => (
-                    <button type="button" key={r.id} className="mh-aula" title={`${r.disciplina}${r.professor ? ` — ${r.professor}` : ''} (clique para retirar)`} onClick={() => onRetirar(r)}>
+                    <button type="button" key={r.id} className="mh-aula" title={`${r.disciplina}${r.professor ? ` — ${r.professor}` : ''} (clique para editar ou retirar)`} onClick={() => onAula(r)}>
                       <b>{sigla(r)}</b>
                       <span>{primeiroNome(r.professor).toUpperCase() || '—'}</span>
                     </button>
@@ -134,32 +134,56 @@ function MapaHorario({ rows, turma, onRetirar }: { rows: Row[]; turma: string; o
           ))}
         </tbody>
       </table>
-      <p className="note" style={{ margin: '8px 0 0' }}>Clique numa aula para a retirar do horário. Passe o rato por cima para ver o nome completo.</p>
+      <p className="note" style={{ margin: '8px 0 0' }}>Clique numa aula para a editar ou retirar do horário. Passe o rato por cima para ver o nome completo.</p>
     </div>
   )
+}
+
+/** Soma minutos a uma hora "HH:MM" (sem passar da meia-noite). */
+function somarMinutos(h: string, min: number) {
+  const [hh, mm] = h.split(':').map(Number)
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return ''
+  const total = Math.min(hh * 60 + mm + min, 23 * 60 + 59)
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
 function Horarios({ c }: { c: Row }) {
   const confirm = useConfirm()
   const turmas = useList('/turmas', { ano_id: c.id })
+  const tempos = useList('/tempos-lectivos')
   const [turma, setTurma] = useState('')
   const [novo, setNovo] = useState(false)
+  const [aula, setAula] = useState<Row | null>(null)       // aula clicada: escolher editar ou retirar
+  const [editar, setEditar] = useState<Row | null>(null)
   const data = dataDoCiclo(c)
   const q = useList(turma ? '/horarios' : null, { turma_id: turma, data })
   const criar = useAct((p: Row) => api.post('/horarios', { ...p, turma_id: Number(turma) }), { invalidate: ['/horarios'], ok: 'Tempo lectivo criado.' })
+  const guardar = useAct((v: { id: number; p: Row }) => api.post(`/horarios/${v.id}/editar`, v.p), { invalidate: ['/horarios'], ok: 'Horário actualizado.' })
   const terminar = useAct((id: number) => api.post(`/horarios/${id}/terminar`), { invalidate: ['/horarios'], ok: 'Tempo lectivo retirado do horário.' })
   const futuro = data > hoje()
 
+  // Tempo escolhido na lista (registada em Registo académico → Tempos lectivos): o fim é início + duração.
+  const duracao = (tempo: unknown) => tempos.rows.find((x) => String(x.ordem) === String(tempo))?.duracao_minutos
+  const derivar = (v: Row, campo: string) => {
+    if (campo !== 'tempo' && campo !== 'hora_inicio') return v
+    const d = duracao(v.tempo)
+    return d && v.hora_inicio ? { ...v, hora_fim: somarMinutos(String(v.hora_inicio), Number(d)) } : { ...v, hora_fim: '' }
+  }
   const campos: FieldDef[] = [
     { name: 'disciplina_id', label: 'Disciplina', type: 'select', options: disciplinaOptions, required: true },
     { name: 'funcionario_id', label: 'Professor', type: 'select', options: { ...funcionarioOptions, params: { cargo: 'professor' } } },
     { name: 'dia_semana', label: 'Dia', type: 'select', options: DIAS, required: true },
-    { name: 'tempo', label: 'Tempo', type: 'number', min: 1, max: 12, required: true, hint: '1.º, 2.º… tempo do dia' },
+    { name: 'tempo', label: 'Tempo', type: 'select', required: true,
+      options: tempos.rows.map((x) => ({ value: x.ordem, label: `${x.designacao} (${x.duracao_minutos} min)` })) },
     { name: 'hora_inicio', label: 'Início', type: 'time', required: true },
-    { name: 'hora_fim', label: 'Fim', type: 'time', required: true },
+    { name: 'hora_fim', label: 'Fim', type: 'time', readOnly: true, hint: 'Calculado: início + duração do tempo' },
     { name: 'sala_id', label: 'Sala', type: 'select', options: salaOptions },
-    { name: 'valido_desde', label: 'Em vigor desde', type: 'date', default: futuro ? data : undefined, hint: 'Em branco: hoje' },
   ]
+  const camposNovo: FieldDef[] = [...campos,
+    { name: 'valido_desde', label: 'Em vigor desde', type: 'date', default: futuro ? data : undefined, hint: 'Em branco: hoje' }]
+  const nomeTurma = String(pick(turmas.rows.find((t) => String(t.id) === turma), 'designacao') ?? '')
+  const descreve = (r: Row) => `${r.disciplina} — ${DIAS.find((d) => d.value === r.dia_semana)?.label}, ${hora(r.hora_inicio)}–${hora(r.hora_fim)}`
+  const semTempos = !tempos.isLoading && !tempos.rows.length
 
   return (
     <section>
@@ -167,19 +191,40 @@ function Horarios({ c }: { c: Row }) {
         <Select label="Turma" value={turma} onChange={setTurma} placeholder={turmas.isLoading ? 'A carregar…' : 'Escolha a turma'}
           options={turmas.rows.map((t) => ({ value: t.id, label: String(pick(t, 'designacao')) }))} />
         <span className="grow" />
-        {turma && <Btn onClick={() => setNovo(true)}>Novo tempo lectivo</Btn>}
+        {turma && <Btn disabled={semTempos} onClick={() => setNovo(true)}>Novo tempo lectivo</Btn>}
       </div>
+      {semTempos && (
+        <p className="note" style={{ margin: '0 0 12px' }}>
+          Para criar o horário, registe primeiro os tempos lectivos (ex.: 1.º tempo, 45 min) em{' '}
+          <Link to="/academico?tab=tempos">Registo académico → Tempos lectivos</Link>.
+        </p>
+      )}
       {!turmas.isLoading && !turmas.rows.length ? <Empty>Crie primeiro as turmas deste ciclo.</Empty>
         : !turma ? <Empty>Escolha uma turma para ver o horário.</Empty>
           : (
             q.isLoading ? <Loading /> : !q.rows.length ? <Empty>Esta turma ainda não tem horário.</Empty> : (
-              <MapaHorario rows={q.rows} turma={String(pick(turmas.rows.find((t) => String(t.id) === turma), 'designacao') ?? '')}
-                onRetirar={async (r) => {
-                  if (await confirm({ title: 'Retirar do horário', text: `Retirar ${r.disciplina} (${DIAS.find((d) => d.value === r.dia_semana)?.label}, ${hora(r.hora_inicio)}–${hora(r.hora_fim)}) do horário? Fica no histórico.`, yes: 'Retirar' })) terminar.mutate(r.id)
-                }} />
+              <MapaHorario rows={q.rows} turma={nomeTurma} onAula={setAula} />
             )
           )}
-      {novo && <FormDialog title="Novo tempo lectivo" fields={campos} onClose={() => setNovo(false)} onSubmit={(p) => criar.mutateAsync(p)} />}
+      {novo && <FormDialog title="Novo tempo lectivo" fields={camposNovo} derivar={derivar} onClose={() => setNovo(false)} onSubmit={(p) => criar.mutateAsync(p)} />}
+      {aula && (
+        <Modal title="Aula no horário" size="sm" onClose={() => setAula(null)} footer={<>
+          <Btn variant="ghost" onClick={async () => {
+            const r = aula
+            setAula(null)
+            if (await confirm({ title: 'Retirar do horário', text: `Retirar ${descreve(r)} do horário? Fica no histórico.`, yes: 'Retirar' })) terminar.mutate(r.id)
+          }}>Retirar</Btn>
+          <Btn onClick={() => { setEditar(aula); setAula(null) }}>Editar</Btn>
+        </>}>
+          <p style={{ margin: 0 }}><b>{descreve(aula)}</b><br />{aula.professor ?? 'Sem professor'} · {nomeTurma}</p>
+        </Modal>
+      )}
+      {editar && (
+        <FormDialog title={`Editar — ${descreve(editar)}`} fields={campos} derivar={derivar}
+          initial={{ ...editar, hora_inicio: hora(editar.hora_inicio), hora_fim: hora(editar.hora_fim) }}
+          intro={<span className="mu">Se esta aula já está em uso, a alteração vale a partir de hoje e a versão anterior fica no histórico (faltas e sumários não mudam).</span>}
+          onClose={() => setEditar(null)} onSubmit={(p) => guardar.mutateAsync({ id: editar.id, p })} />
+      )}
     </section>
   )
 }
