@@ -4,14 +4,29 @@ import { FormDialog, type FieldDef } from '@/components/FormDialog'
 import { Modal, ResultDialog } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
-import { Btn, Empty, Estado, Loading, PageHead, Select, Tabs } from '@/components/ui'
+import { Btn, Empty, Estado, Loading, PageHead, Select, Tabs, Tag } from '@/components/ui'
 import { api } from '@/lib/api'
 import { num, perfisOf, pick, type Row } from '@/lib/data'
 import { TIPOS_SALA, disciplinaOptions } from '@/lib/academic'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 
-type Tab = 'classes' | 'salas' | 'professores' | 'disciplinas' | 'programas' | 'niveis' | 'funcionarios'
+type Tab = 'niveis' | 'classes' | 'disciplinas' | 'programas' | 'salas' | 'professores' | 'funcionarios'
+
+/* ------------ Ordem (posição na lista) ------------
+   Ao criar é automática (a seguinte). Ao editar pode mudar-se: se outro registo já tiver essa ordem, os dois trocam. */
+const campoOrdem: FieldDef = { name: 'ordem', label: 'Ordem', type: 'number', min: 1, required: true,
+  hint: 'Posição na lista. Se outro registo já tiver esta ordem, os dois trocam de posição.' }
+const semOrdem = (fs: FieldDef[]) => fs.filter((f) => f.name !== 'ordem')
+
+/** Ordens que aparecem mais de uma vez (dados antigos): mostram-se a vermelho para corrigir. */
+function repetidas(rows: Row[], grupo: (r: Row) => unknown = () => '') {
+  const vistas = new Map<string, number>()
+  for (const r of rows) { const k = `${grupo(r)}|${r.ordem}`; vistas.set(k, (vistas.get(k) ?? 0) + 1) }
+  return (r: Row) => (vistas.get(`${grupo(r)}|${r.ordem}`) ?? 0) > 1
+}
+const celOrdem = (rep: (r: Row) => boolean) => (r: Row) =>
+  rep(r) ? <span title="Há outro registo com a mesma ordem: edite um deles para a corrigir.">{r.ordem} <Tag tone="er">Repetida</Tag></span> : r.ordem
 
 /* ------------ Ano lectivo ------------ */
 const periodoFields: FieldDef[] = [
@@ -91,7 +106,7 @@ export function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onC
 const TRIMESTRES = [{ value: 1, label: '1.º trimestre' }, { value: 2, label: '2.º trimestre' }, { value: 3, label: '3.º trimestre' }]
 const unidadeFields: FieldDef[] = [
   { name: 'titulo', label: 'Unidade temática', required: true, wide: true, placeholder: 'Ex.: Números naturais' },
-  { name: 'ordem', label: 'Ordem', type: 'number', min: 1, required: true },
+  campoOrdem,
   { name: 'trimestre', label: 'Trimestre', type: 'select', options: TRIMESTRES },
   { name: 'tempos_previstos', label: 'Tempos previstos', type: 'number', min: 1, hint: 'N.º de tempos lectivos' },
   { name: 'objectivos', label: 'Objectivos', type: 'textarea', wide: true },
@@ -126,8 +141,8 @@ function Programas() {
           invalidate={['/programas']}
           crud="/programas"
           createLabel="Nova unidade"
-          createFields={unidadeFields}
-          createInitial={{ ordem: q.rows.length + 1 }}
+          createFields={semOrdem(unidadeFields)}
+          editFields={unidadeFields}
           beforeCreate={(p) => ({ ...p, classe_id: Number(classe), disciplina_id: Number(disciplina) })}
           deleteName={(r) => String(r.titulo)}
           pageSize={0}
@@ -140,7 +155,7 @@ function Programas() {
             </div>
           )}
           cols={[
-            { h: 'N.º', k: 'ordem' },
+            { h: 'N.º', render: celOrdem(repetidas(q.rows)) },
             { h: 'Unidade temática', k: 'titulo' },
             { h: 'Trimestre', render: (r) => (r.trimestre ? `${r.trimestre}.º` : '—') },
             { h: 'Tempos', render: (r) => r.tempos_previstos ?? '—' },
@@ -192,15 +207,15 @@ function Coordenador({ id }: { id?: number | null }) {
 }
 
 const nivelFields: FieldDef[] = [
-  { name: 'nome', label: 'Nome', required: true, placeholder: 'Ensino Primário' }, { name: 'ordem', label: 'Ordem', type: 'number', default: 0 },
+  { name: 'nome', label: 'Nome', required: true, placeholder: 'Ensino Primário' }, campoOrdem,
   { name: 'coordenador_id', label: 'Coordenador do nível', type: 'select', wide: true, empty: 'Toda a coordenação',
     hint: 'Recebe as candidaturas das classes deste nível.',
     options: { path: '/utilizadores', label: ['nome'], filter: (u: Row) => !perfisOf(u).includes('encarregado') } },
 ]
 const classeFields: FieldDef[] = [
   { name: 'nivel_id', label: 'Nível', type: 'select', options: { path: '/niveis', label: ['nome'] }, required: true },
-  { name: 'designacao', label: 'Designação', required: true, placeholder: '7.ª classe' },
-  { name: 'ordem', label: 'Ordem', type: 'number', required: true },
+  { name: 'designacao', label: 'Designação', required: true, placeholder: '7.ª Classe' },
+  campoOrdem,
 ]
 const disciplinaFields: FieldDef[] = [{ name: 'nome', label: 'Nome', required: true }, { name: 'sigla', label: 'Sigla' }]
 
@@ -208,14 +223,16 @@ export default function Academico() {
   const [sp, setSp] = useSearchParams()
   const pedido = sp.get('tab')
   // Endereços antigos: os anos lectivos passaram para Ciclos académicos.
-  const tab: Tab = pedido === 'anos' || !pedido ? 'classes' : (pedido as Tab)
+  const tab: Tab = pedido === 'anos' || !pedido ? 'niveis' : (pedido as Tab)
   const setTab = (t: Tab) => setSp({ tab: t }, { replace: true })
   const [plano, setPlano] = useState<Row | null>(null)
+  const niveisQ = useList(tab === 'niveis' ? '/niveis' : null)
+  const classesQ = useList(tab === 'classes' ? '/classes' : null)
   if (pedido === 'anos') return <Navigate to="/ciclos" replace />
   return (
     <>
-      <PageHead title="Registo académico" sub="Classes, salas, professores, disciplinas e programas das disciplinas." />
-      <Tabs<Tab> value={tab} onChange={setTab} tabs={[['classes', 'Classes'], ['salas', 'Salas'], ['professores', 'Professores'], ['disciplinas', 'Disciplinas'], ['programas', 'Programas das disciplinas'], ['niveis', 'Níveis de ensino'], ['funcionarios', 'Outros funcionários']]} />
+      <PageHead title="Registo académico" sub="Pela ordem em que se preenche: níveis de ensino, classes, disciplinas, programas, salas e professores." />
+      <Tabs<Tab> value={tab} onChange={setTab} tabs={[['niveis', 'Níveis de ensino'], ['classes', 'Classes'], ['disciplinas', 'Disciplinas'], ['programas', 'Programas das disciplinas'], ['salas', 'Salas'], ['professores', 'Professores'], ['funcionarios', 'Outros funcionários']]} />
 
       {tab === 'programas' && <Programas />}
       {tab === 'professores' && (
@@ -227,16 +244,16 @@ export default function Academico() {
           cols={[{ h: 'Nome', k: ['nome_completo', 'nome'] }, { h: 'Contratado em', k: 'ano_contratacao' }, { h: 'Telefone', k: 'telefone' }, { h: 'E-mail', k: 'email' }, { h: 'Estado', render: (r) => <Estado v={pick(r, 'activo') === false ? 'inactivo' : 'activo'} /> }]} />
       )}
       {tab === 'niveis' && (
-        <Resource path="/niveis" createLabel="Novo nível" createFields={nivelFields} editFields={nivelFields}
+        <Resource path="/niveis" createLabel="Novo nível" createFields={semOrdem(nivelFields)} editFields={nivelFields}
           editPath={(r) => `/niveis/${r.id}`} deletePath={(r) => `/niveis/${r.id}`}
-          cols={[{ h: 'Ordem', k: 'ordem' }, { h: 'Nível', k: ['nome', 'designacao'] }, { h: 'Coordenador', render: (r) => <Coordenador id={r.coordenador_id} /> }]} />
+          cols={[{ h: 'Ordem', render: celOrdem(repetidas(niveisQ.rows)) }, { h: 'Nível', k: ['nome', 'designacao'] }, { h: 'Coordenador', render: (r) => <Coordenador id={r.coordenador_id} /> }]} />
       )}
       {tab === 'classes' && (
         <>
           <Resource path="/classes" createLabel="Nova classe" pageSize={30}
-            createFields={classeFields} editFields={classeFields}
+            createFields={semOrdem(classeFields)} editFields={classeFields}
             editPath={(r) => `/classes/${r.id}`} deletePath={(r) => `/classes/${r.id}`}
-            cols={[{ h: 'Ordem', k: 'ordem' }, { h: 'Classe', k: ['designacao', 'nome'] }, { h: 'Nível', k: ['nivel', 'nivel_nome', 'nivel.nome'] }]}
+            cols={[{ h: 'Ordem', render: celOrdem(repetidas(classesQ.rows)) }, { h: 'Classe', k: ['designacao', 'nome'] }, { h: 'Nível', k: ['nivel', 'nivel_nome', 'nivel.nome'] }]}
             rowActions={(r) => <Btn variant="link" onClick={() => setPlano(r)}>Plano curricular</Btn>} />
           {plano && <Plano c={plano} onClose={() => setPlano(null)} />}
         </>
