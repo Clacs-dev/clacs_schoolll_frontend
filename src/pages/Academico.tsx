@@ -14,19 +14,42 @@ import { useAct, useList } from '@/lib/hooks'
 type Tab = 'niveis' | 'classes' | 'disciplinas' | 'programas' | 'salas' | 'tempos' | 'professores' | 'funcionarios'
 
 /* ------------ Ordem (posição na lista) ------------
-   Ao criar é automática (a seguinte). Ao editar pode mudar-se: se outro registo já tiver essa ordem, os dois trocam. */
-const campoOrdem: FieldDef = { name: 'ordem', label: 'Ordem', type: 'number', min: 1, required: true,
-  hint: 'Posição na lista. Se outro registo já tiver esta ordem, os dois trocam de posição.' }
+   Totalmente automática: ao criar fica no fim; para mudar a posição usa-se «Subir» / «Descer» no menu ⋯
+   (a lista é renumerada 1, 2, 3…). Não é o id do registo. */
 const semOrdem = (fs: FieldDef[]) => fs.filter((f) => f.name !== 'ordem')
 
-/** Ordens que aparecem mais de uma vez (dados antigos): mostram-se a vermelho para corrigir. */
-function repetidas(rows: Row[], grupo: (r: Row) => unknown = () => '') {
-  const vistas = new Map<string, number>()
-  for (const r of rows) { const k = `${grupo(r)}|${r.ordem}`; vistas.set(k, (vistas.get(k) ?? 0) + 1) }
-  return (r: Row) => (vistas.get(`${grupo(r)}|${r.ordem}`) ?? 0) > 1
+/** Ordens que aparecem mais de uma vez (dados antigos): mostram-se a vermelho até se corrigir a numeração. */
+function repetidas(rows: Row[]) {
+  const vistas = new Map<unknown, number>()
+  for (const r of rows) vistas.set(r.ordem, (vistas.get(r.ordem) ?? 0) + 1)
+  return (r: Row) => (vistas.get(r.ordem) ?? 0) > 1
 }
 const celOrdem = (rep: (r: Row) => boolean) => (r: Row) =>
-  rep(r) ? <span title="Há outro registo com a mesma ordem: edite um deles para a corrigir.">{r.ordem} <Tag tone="er">Repetida</Tag></span> : r.ordem
+  rep(r) ? <span title="Há outro registo com a mesma ordem: use «Corrigir numeração».">{r.ordem} <Tag tone="er">Repetida</Tag></span> : r.ordem
+
+/** «Subir», «Descer» e «Corrigir numeração» de uma lista ordenada (envia a lista inteira pela nova ordem). */
+function useOrdenar(path: string, rows: Row[]) {
+  const mover = useAct((ids: number[]) => api.post(`${path}/reordenar`, { ids }), { invalidate: [path], ok: 'Ordem actualizada.' })
+  const ids = rows.map((r) => r.id as number)
+  const trocar = (r: Row, delta: number) => {
+    const i = ids.indexOf(r.id), j = i + delta
+    if (i < 0 || j < 0 || j >= ids.length) return
+    const novo = [...ids]; [novo[i], novo[j]] = [novo[j], novo[i]]
+    mover.mutate(novo)
+  }
+  const temRepetidas = new Set(rows.map((r) => r.ordem)).size < rows.length
+  const accoes = (r: Row) => {
+    const i = ids.indexOf(r.id)
+    return <>
+      {i > 0 && <Btn variant="link" onClick={() => trocar(r, -1)}>Subir</Btn>}
+      {i >= 0 && i < ids.length - 1 && <Btn variant="link" onClick={() => trocar(r, 1)}>Descer</Btn>}
+    </>
+  }
+  const corrigir = temRepetidas
+    ? <Btn variant="ghost" busy={mover.isPending} onClick={() => mover.mutate(ids)}>Corrigir numeração</Btn>
+    : null
+  return { accoes, corrigir }
+}
 
 /* ------------ Ano lectivo ------------ */
 const periodoFields: FieldDef[] = [
@@ -106,7 +129,6 @@ export function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onC
 const TRIMESTRES = [{ value: 1, label: '1.º trimestre' }, { value: 2, label: '2.º trimestre' }, { value: 3, label: '3.º trimestre' }]
 const unidadeFields: FieldDef[] = [
   { name: 'titulo', label: 'Unidade temática', required: true, wide: true, placeholder: 'Ex.: Números naturais' },
-  campoOrdem,
   { name: 'trimestre', label: 'Trimestre', type: 'select', options: TRIMESTRES },
   { name: 'tempo_lectivo_id', label: 'Tempo', type: 'select', hint: 'Tempos registados em «Tempos lectivos»',
     options: { path: '/tempos-lectivos', text: (r: Row) => `${r.designacao} (${r.duracao_minutos} min)` } },
@@ -124,6 +146,7 @@ function Programas() {
   const discs = plano.rows.length ? plano.rows : todas.rows
   const params = { classe_id: classe, disciplina_id: disciplina }
   const q = useList(classe && disciplina ? '/programas' : null, params)
+  const ordenar = useOrdenar('/programas', q.rows)
   const tempos = useList('/tempos-lectivos')
   const nomeTempo = (id: unknown) => {
     const x = tempos.rows.find((t) => t.id === id)
@@ -147,6 +170,8 @@ function Programas() {
           crud="/programas"
           createLabel="Nova unidade"
           createFields={semOrdem(unidadeFields)}
+          toolbar={ordenar.corrigir}
+          rowActions={ordenar.accoes}
           editFields={unidadeFields}
           beforeCreate={(p) => ({ ...p, classe_id: Number(classe), disciplina_id: Number(disciplina) })}
           deleteName={(r) => String(r.titulo)}
@@ -212,7 +237,7 @@ function Coordenador({ id }: { id?: number | null }) {
 }
 
 const nivelFields: FieldDef[] = [
-  { name: 'nome', label: 'Nome', required: true, placeholder: 'Ensino Primário' }, campoOrdem,
+  { name: 'nome', label: 'Nome', required: true, placeholder: 'Ensino Primário' },
   { name: 'coordenador_id', label: 'Coordenador do nível', type: 'select', wide: true, empty: 'Toda a coordenação',
     hint: 'Recebe as candidaturas das classes deste nível.',
     options: { path: '/utilizadores', label: ['nome'], filter: (u: Row) => !perfisOf(u).includes('encarregado') } },
@@ -220,12 +245,10 @@ const nivelFields: FieldDef[] = [
 const classeFields: FieldDef[] = [
   { name: 'nivel_id', label: 'Nível', type: 'select', options: { path: '/niveis', label: ['nome'] }, required: true },
   { name: 'designacao', label: 'Designação', required: true, placeholder: '7.ª Classe' },
-  campoOrdem,
 ]
 const tempoFields: FieldDef[] = [
   { name: 'designacao', label: 'Nome', placeholder: 'Em branco: «1.º tempo», «2.º tempo»…' },
   { name: 'duracao_minutos', label: 'Duração (minutos)', type: 'number', min: 5, max: 240, default: 45, required: true },
-  campoOrdem,
 ]
 const disciplinaFields: FieldDef[] = [{ name: 'nome', label: 'Nome', required: true }, { name: 'sigla', label: 'Sigla' }]
 
@@ -239,6 +262,8 @@ export default function Academico() {
   const niveisQ = useList(tab === 'niveis' ? '/niveis' : null)
   const classesQ = useList(tab === 'classes' ? '/classes' : null)
   const temposQ = useList(tab === 'tempos' ? '/tempos-lectivos' : null)
+  const ordenarNiveis = useOrdenar('/niveis', niveisQ.rows)
+  const ordenarClasses = useOrdenar('/classes', classesQ.rows)
   if (pedido === 'anos') return <Navigate to="/ciclos" replace />
   return (
     <>
@@ -255,17 +280,18 @@ export default function Academico() {
           cols={[{ h: 'Nome', k: ['nome_completo', 'nome'] }, { h: 'Contratado em', k: 'ano_contratacao' }, { h: 'Telefone', k: 'telefone' }, { h: 'E-mail', k: 'email' }, { h: 'Estado', render: (r) => <Estado v={pick(r, 'activo') === false ? 'inactivo' : 'activo'} /> }]} />
       )}
       {tab === 'niveis' && (
-        <Resource path="/niveis" createLabel="Novo nível" createFields={semOrdem(nivelFields)} editFields={nivelFields}
+        <Resource path="/niveis" createLabel="Novo nível" createFields={nivelFields} editFields={nivelFields}
+          toolbar={ordenarNiveis.corrigir} rowActions={ordenarNiveis.accoes}
           editPath={(r) => `/niveis/${r.id}`} deletePath={(r) => `/niveis/${r.id}`}
           cols={[{ h: 'Ordem', render: celOrdem(repetidas(niveisQ.rows)) }, { h: 'Nível', k: ['nome', 'designacao'] }, { h: 'Coordenador', render: (r) => <Coordenador id={r.coordenador_id} /> }]} />
       )}
       {tab === 'classes' && (
         <>
           <Resource path="/classes" createLabel="Nova classe" pageSize={30}
-            createFields={semOrdem(classeFields)} editFields={classeFields}
+            createFields={classeFields} editFields={classeFields} toolbar={ordenarClasses.corrigir}
             editPath={(r) => `/classes/${r.id}`} deletePath={(r) => `/classes/${r.id}`}
             cols={[{ h: 'Ordem', render: celOrdem(repetidas(classesQ.rows)) }, { h: 'Classe', k: ['designacao', 'nome'] }, { h: 'Nível', k: ['nivel', 'nivel_nome', 'nivel.nome'] }]}
-            rowActions={(r) => <Btn variant="link" onClick={() => setPlano(r)}>Plano curricular</Btn>} />
+            rowActions={(r) => <><Btn variant="link" onClick={() => setPlano(r)}>Plano curricular</Btn>{ordenarClasses.accoes(r)}</>} />
           {plano && <Plano c={plano} onClose={() => setPlano(null)} />}
         </>
       )}
@@ -275,7 +301,7 @@ export default function Academico() {
           cols={[{ h: 'Disciplina', k: ['nome', 'designacao'] }, { h: 'Sigla', k: 'sigla' }]} />
       )}
       {tab === 'tempos' && (
-        <Resource path="/tempos-lectivos" createLabel="Novo tempo lectivo" createFields={semOrdem(tempoFields)} editFields={tempoFields}
+        <Resource path="/tempos-lectivos" createLabel="Novo tempo lectivo" createFields={tempoFields} editFields={tempoFields}
           editPath={(r) => `/tempos-lectivos/${r.id}`} deletePath={(r) => `/tempos-lectivos/${r.id}`}
           hint="Os tempos do dia e a duração de cada um. No horário escolhe-se o tempo e a hora de fim é calculada (início + duração)."
           empty="Ainda não há tempos lectivos. Crie o 1.º tempo (por omissão, 45 minutos)."
