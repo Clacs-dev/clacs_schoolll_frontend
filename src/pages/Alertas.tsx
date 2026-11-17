@@ -1,3 +1,4 @@
+import { MenuAccoes } from '@/components/MenuAccoes'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useConfirm } from '@/components/Modal'
@@ -84,7 +85,7 @@ export default function Alertas() {
           { h: 'Aluno', k: ['aluno_nome', 'aluno.nome_completo', 'aluno.nome', 'aluno'] },
           { h: 'Data', render: (r) => dataPT(pick(r, 'criado_em', 'data', 'created_at', 'gerado_em')) },
           { h: 'Estado', k: 'estado', estado: true },
-          { h: '', render: (r) => <span className="row-a" onClick={(e) => e.stopPropagation()}>{accoes(r)}</span> },
+          { h: '', render: (r) => { const a = accoes(r); return a && <MenuAccoes>{a}</MenuAccoes> } },
         ]}
       />
     </>

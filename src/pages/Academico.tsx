@@ -108,7 +108,8 @@ const unidadeFields: FieldDef[] = [
   { name: 'titulo', label: 'Unidade temática', required: true, wide: true, placeholder: 'Ex.: Números naturais' },
   campoOrdem,
   { name: 'trimestre', label: 'Trimestre', type: 'select', options: TRIMESTRES },
-  { name: 'tempos_previstos', label: 'Tempos previstos', type: 'number', min: 1, hint: 'N.º de tempos lectivos' },
+  { name: 'tempo_lectivo_id', label: 'Tempo', type: 'select', hint: 'Tempos registados em «Tempos lectivos»',
+    options: { path: '/tempos-lectivos', text: (r: Row) => `${r.designacao} (${r.duracao_minutos} min)` } },
   { name: 'objectivos', label: 'Objectivos', type: 'textarea', wide: true },
   { name: 'conteudos', label: 'Conteúdos', type: 'textarea', wide: true },
 ]
@@ -123,7 +124,11 @@ function Programas() {
   const discs = plano.rows.length ? plano.rows : todas.rows
   const params = { classe_id: classe, disciplina_id: disciplina }
   const q = useList(classe && disciplina ? '/programas' : null, params)
-  const total = q.rows.reduce((s, r) => s + num(r.tempos_previstos), 0)
+  const tempos = useList('/tempos-lectivos')
+  const nomeTempo = (id: unknown) => {
+    const x = tempos.rows.find((t) => t.id === id)
+    return x ? `${x.designacao} (${x.duracao_minutos} min)` : '—'
+  }
   const carga = plano.rows.find((d) => String(d.id) === disciplina)?.carga_horaria
 
   return (
@@ -146,7 +151,7 @@ function Programas() {
           beforeCreate={(p) => ({ ...p, classe_id: Number(classe), disciplina_id: Number(disciplina) })}
           deleteName={(r) => String(r.titulo)}
           pageSize={0}
-          hint={<>{q.rows.length} unidade(s){total ? ` · ${total} tempos previstos` : ''}{carga ? ` · carga horária da disciplina: ${carga} tempos por semana` : ''}. Clique numa unidade para ver os objectivos e conteúdos.</>}
+          hint={<>{q.rows.length} unidade(s){carga ? ` · carga horária da disciplina: ${carga} tempos por semana` : ''}. Em «⋯ → Visualizar» vê os objectivos e conteúdos.</>}
           empty="Esta disciplina ainda não tem programa nesta classe."
           expand={(r) => (
             <div style={{ display: 'grid', gap: 8, whiteSpace: 'pre-wrap' }}>
@@ -158,7 +163,7 @@ function Programas() {
             { h: 'N.º', render: celOrdem(repetidas(q.rows)) },
             { h: 'Unidade temática', k: 'titulo' },
             { h: 'Trimestre', render: (r) => (r.trimestre ? `${r.trimestre}.º` : '—') },
-            { h: 'Tempos', render: (r) => r.tempos_previstos ?? '—' },
+            { h: 'Tempo', render: (r) => nomeTempo(r.tempo_lectivo_id) },
           ]}
         />
       )}

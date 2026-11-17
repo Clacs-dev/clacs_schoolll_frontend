@@ -3,8 +3,9 @@ import { api, type Params } from '@/lib/api'
 import type { Row } from '@/lib/data'
 import { useAct, useList } from '@/lib/hooks'
 import { FormDialog, type FieldDef } from './FormDialog'
-import { useConfirm } from './Modal'
-import { Table, type Col } from './Table'
+import { MenuAccoes } from './MenuAccoes'
+import { Modal, useConfirm } from './Modal'
+import { Table, cell, type Col } from './Table'
 import { Btn, SearchBox } from './ui'
 
 type Props = {
@@ -57,6 +58,7 @@ export function Resource({
   const q = useList(path, params)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Row | null>(null)
+  const [viewing, setViewing] = useState<Row | null>(null)
   const [term, setTerm] = useState('')
   const inv = invalidate ?? [path]
 
@@ -85,19 +87,18 @@ export function Resource({
     return l
   }, [q.rows, filter, term])
 
-  const columns: Col[] = [...cols]
-  if ((editFields && editPath) || rowActions || deletePath) {
-    columns.push({
-      h: '',
-      render: (r) => (
-        <span className="row-a" onClick={(e) => e.stopPropagation()}>
-          {rowActions?.(r)}
-          {editFields && editPath && <Btn variant="link" onClick={() => setEditing(r)}>{editLabel}</Btn>}
-          {deletePath && <Btn variant="link" onClick={() => pedirApagar(r)}>Apagar</Btn>}
-        </span>
-      ),
-    })
-  }
+  // Acções de cada linha num menu "⋯": Visualizar, as acções próprias da lista, Editar e Apagar.
+  const columns: Col[] = [...cols, {
+    h: '',
+    render: (r) => (
+      <MenuAccoes>
+        <Btn variant="link" onClick={() => setViewing(r)}>Visualizar</Btn>
+        {rowActions?.(r)}
+        {editFields && editPath && <Btn variant="link" onClick={() => setEditing(r)}>{editLabel}</Btn>}
+        {deletePath && <Btn variant="link" className="perigo" onClick={() => pedirApagar(r)}>Apagar</Btn>}
+      </MenuAccoes>
+    ),
+  }]
 
   return (
     <section style={{ marginBottom: 20 }}>
@@ -119,6 +120,20 @@ export function Resource({
           onClose={() => setCreating(false)}
           onSubmit={(p, v) => criar.mutateAsync({ p, v })}
         />
+      )}
+      {viewing && (
+        <Modal title={String(viewing.designacao ?? viewing.nome_completo ?? viewing.nome ?? viewing.titulo ?? 'Detalhes')} onClose={() => setViewing(null)}
+          footer={<>
+            {editFields && editPath && <Btn variant="ghost" onClick={() => { setEditing(viewing); setViewing(null) }}>{editLabel}</Btn>}
+            <Btn onClick={() => setViewing(null)}>Fechar</Btn>
+          </>}>
+          <dl className="detalhe">
+            {cols.filter((c) => c.h).map((c, i) => (
+              <div key={i}><dt>{c.h}</dt><dd>{cell(c, viewing, 0)}</dd></div>
+            ))}
+          </dl>
+          {expand && <div style={{ marginTop: 12 }}>{expand(viewing)}</div>}
+        </Modal>
       )}
       {editing && editFields && (
         <FormDialog

@@ -15,7 +15,7 @@ export type Col<T = Row> = {
   nowrap?: boolean
 }
 
-function cell<T extends Row>(c: Col<T>, r: T, i: number): ReactNode {
+export function cell<T extends Row>(c: Col<T>, r: T, i: number): ReactNode {
   if (c.render) return c.render(r, i)
   const keys = Array.isArray(c.k) ? c.k : c.k ? [c.k] : []
   const v = pick(r, ...keys)

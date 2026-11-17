@@ -1,3 +1,4 @@
+import { MenuAccoes } from '@/components/MenuAccoes'
 import { useState, type FormEvent } from 'react'
 import { FormDialog, FormFields, toPayload, type FieldDef } from '@/components/FormDialog'
 import { Modal, useConfirm } from '@/components/Modal'
@@ -75,7 +76,7 @@ function Rotas() {
               cols={[
                 { h: 'Ordem', k: 'ordem' }, { h: 'Paragem', k: 'nome' }, { h: 'Referência', k: 'referencia' },
                 { h: 'Ida', render: (p) => hora(p.hora_ida) }, { h: 'Volta', render: (p) => hora(p.hora_volta) },
-                { h: '', render: (p) => <Btn variant="link" onClick={() => apagarParagem.mutate(p.id)}>Apagar</Btn> },
+                { h: '', render: (p) => <MenuAccoes><Btn variant="link" className="perigo" onClick={() => apagarParagem.mutate(p.id)}>Apagar</Btn></MenuAccoes> },
               ]} />
             <Btn variant="ghost" size="sm" onClick={() => setParagem(r)}>Acrescentar paragem</Btn>
           </div>
@@ -134,12 +135,12 @@ function Inscricoes() {
           { h: 'Estado', render: (i) => <Estado v={i.estado} /> },
           {
             h: '', render: (i) => (
-              <span className="row-a">
+              <MenuAccoes>
                 <Btn variant="link" onClick={() => mudar.mutate({ id: i.id, estado: 'suspensa' })}>Suspender</Btn>
-                <Btn variant="link" onClick={async () => {
+                <Btn variant="link" className="perigo" onClick={async () => {
                   if (await confirm({ title: 'Cancelar inscrição', text: 'O aluno deixa de usar o transporte e de ser cobrado.', danger: true, yes: 'Cancelar inscrição' })) mudar.mutate({ id: i.id, estado: 'cancelada' })
-                }}>Cancelar</Btn>
-              </span>
+                }}>Cancelar inscrição</Btn>
+              </MenuAccoes>
             ),
           },
         ]} />

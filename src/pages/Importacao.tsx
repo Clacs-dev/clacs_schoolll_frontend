@@ -1,3 +1,4 @@
+import { MenuAccoes } from '@/components/MenuAccoes'
 import { useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { Table } from '@/components/Table'
@@ -90,7 +91,7 @@ export default function Importacao() {
         { h: 'Importadas', k: ['importadas', 'sucesso', 'ok'] },
         { h: 'Erros', k: ['erros', 'total_erros'] },
         { h: 'Estado', render: (r) => <Estado v={pick(r, 'estado')} /> },
-        { h: '', render: (r) => <Btn variant="link" onClick={() => setErros(r)}>Ver erros</Btn> },
+        { h: '', render: (r) => <MenuAccoes><Btn variant="link" onClick={() => setErros(r)}>Ver erros</Btn></MenuAccoes> },
       ]} />
       {erros && <Erros lote={erros} onClose={() => setErros(null)} />}
     </>

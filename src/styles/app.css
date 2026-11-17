@@ -203,6 +203,21 @@ tbody tr.clk:hover { background: var(--ac2); }
 .tw-f { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-top: 1px solid var(--ln); font-size: 13px; gap: 10px; flex-wrap: wrap; }
 .pager { display: inline-flex; gap: 8px; align-items: center; }
 .row-a { display: inline-flex; gap: 6px; }
+/* menu "⋯" das acções de cada linha */
+.menu-accoes { display: inline-flex; justify-content: flex-end; width: 100%; }
+.menu-accoes-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; color: var(--mu); cursor: pointer; }
+.menu-accoes-btn:hover, .menu-accoes-btn[aria-expanded="true"] { background: var(--sf2); color: var(--tx); }
+.menu-accoes-btn:focus-visible { outline: 2px solid var(--ac); outline-offset: 1px; }
+.menu-accoes-lista { position: fixed; z-index: 60; min-width: 190px; display: flex; flex-direction: column; padding: 6px; background: var(--sf); border: 1px solid var(--ln); border-radius: 10px; box-shadow: var(--shadow); }
+.menu-accoes-lista .btn { display: block; background: none; box-shadow: none; border: 0; width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px; color: var(--tx); font-weight: 500; white-space: nowrap; }
+.menu-accoes-lista .btn:hover { background: var(--sf2); text-decoration: none; }
+.menu-accoes-lista .btn.perigo { color: var(--er); }
+/* "Visualizar": rótulo e valor */
+.detalhe { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 8px 16px; margin: 0; }
+.detalhe > div { display: contents; }
+.detalhe dt { color: var(--mu); font-size: 13px; }
+.detalhe dd { margin: 0; font-weight: 500; }
+@media (pointer: coarse) { .menu-accoes-btn { width: 44px; height: 44px; } .menu-accoes-lista .btn { padding: 12px; } }
 
 /* ============ Tags, estados, progresso ============ */
 .tag { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }

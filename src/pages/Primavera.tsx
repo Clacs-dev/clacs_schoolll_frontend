@@ -1,3 +1,4 @@
+import { MenuAccoes } from '@/components/MenuAccoes'
 import { useState } from 'react'
 import { AutoSections } from '@/components/Auto'
 import { FormDialog } from '@/components/FormDialog'
@@ -57,10 +58,10 @@ export default function Primavera() {
             { h: 'Problema', k: ['problema', 'descricao', 'detalhe', 'mensagem'], nowrap: false },
             { h: 'Estado', render: (r) => <Estado v={pick(r, 'estado')} /> },
             { h: '', render: (r) => String(pick(r, 'estado') ?? 'pendente') === 'pendente' && (
-              <span className="row-a">
-                <Btn size="sm" variant="ghost" onClick={() => resolver.mutate({ id: r.id, accao: 'resolver' })}>{pick(r, 'accao_sugerida') ?? 'Resolver'}</Btn>
-                <Btn size="sm" variant="link" onClick={() => resolver.mutate({ id: r.id, accao: 'ignorar' })}>Ignorar</Btn>
-              </span>
+              <MenuAccoes>
+                <Btn variant="link" onClick={() => resolver.mutate({ id: r.id, accao: 'resolver' })}>{pick(r, 'accao_sugerida') ?? 'Resolver'}</Btn>
+                <Btn variant="link" onClick={() => resolver.mutate({ id: r.id, accao: 'ignorar' })}>Ignorar</Btn>
+              </MenuAccoes>
             ) },
           ]} />
         </>

@@ -5,9 +5,11 @@ import { Modal, ResultDialog, useConfirm } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
 import { Btn, Card, Empty, Loading, PageHead, Select, Tag } from '@/components/ui'
-import { api } from '@/lib/api'
+import { api, errMsg } from '@/lib/api'
+import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/components/Toast'
 import { num, pick, type Row } from '@/lib/data'
-import { disciplinaOptions, funcionarioOptions, isActivo, salaOptions } from '@/lib/academic'
+import { disciplinaOptions, funcionarioOptions, isActivo } from '@/lib/academic'
 import { nomeCiclo, useCicloActual } from '@/lib/ciclos'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
@@ -157,7 +159,30 @@ function Horarios({ c }: { c: Row }) {
   const [editar, setEditar] = useState<Row | null>(null)
   const data = dataDoCiclo(c)
   const q = useList(turma ? '/horarios' : null, { turma_id: turma, data })
-  const criar = useAct((p: Row) => api.post('/horarios', { ...p, turma_id: Number(turma) }), { invalidate: ['/horarios'], ok: 'Tempo lectivo criado.' })
+  const toast = useToast()
+  const qc = useQueryClient()
+  /** Cria o mesmo tempo lectivo em cada dia escolhido (ex.: Ciências da Natureza à segunda e à quarta). */
+  const criarNosDias = async (p: Row) => {
+    const dias: number[] = Array.isArray(p.dia_semana) ? p.dia_semana : []
+    if (!dias.length) {
+      toast.error('Escolha pelo menos um dia da semana.')
+      throw new Error('sem dias')
+    }
+    const erros: string[] = []
+    let criados = 0
+    for (const d of dias) {
+      try {
+        await api.post('/horarios', { ...p, dia_semana: d, turma_id: Number(turma) })
+        criados++
+      } catch (e) {
+        erros.push(`${DIAS.find((x) => x.value === d)?.label}: ${errMsg(e)}`)
+      }
+    }
+    qc.invalidateQueries({ predicate: (q) => String(q.queryKey[0]).startsWith('/horarios') })
+    if (criados) toast.ok(criados === 1 ? 'Tempo lectivo criado.' : `Tempo lectivo criado em ${criados} dias.`)
+    erros.forEach((m) => toast.error(m))
+    if (!criados) throw new Error('nenhum criado')   // mantém o formulário aberto para corrigir
+  }
   const guardar = useAct((v: { id: number; p: Row }) => api.post(`/horarios/${v.id}/editar`, v.p), { invalidate: ['/horarios'], ok: 'Horário actualizado.' })
   const terminar = useAct((id: number) => api.post(`/horarios/${id}/terminar`), { invalidate: ['/horarios'], ok: 'Tempo lectivo retirado do horário.' })
   const futuro = data > hoje()
@@ -177,9 +202,11 @@ function Horarios({ c }: { c: Row }) {
       options: tempos.rows.map((x) => ({ value: x.ordem, label: `${x.designacao} (${x.duracao_minutos} min)` })) },
     { name: 'hora_inicio', label: 'Início', type: 'time', required: true },
     { name: 'hora_fim', label: 'Fim', type: 'time', readOnly: true, hint: 'Calculado: início + duração do tempo' },
-    { name: 'sala_id', label: 'Sala', type: 'select', options: salaOptions },
   ]
-  const camposNovo: FieldDef[] = [...campos,
+  // No novo tempo lectivo escolhem-se vários dias; a sala é a da turma.
+  const camposNovo: FieldDef[] = [
+    ...campos.map((f) => (f.name === 'dia_semana' ? { ...f, type: 'multi' as const, label: 'Dias da semana', default: [],
+      hint: 'Pode escolher vários dias: cria-se uma aula em cada um' } : f)),
     { name: 'valido_desde', label: 'Em vigor desde', type: 'date', default: futuro ? data : undefined, hint: 'Em branco: hoje' }]
   const nomeTurma = String(pick(turmas.rows.find((t) => String(t.id) === turma), 'designacao') ?? '')
   const descreve = (r: Row) => `${r.disciplina} — ${DIAS.find((d) => d.value === r.dia_semana)?.label}, ${hora(r.hora_inicio)}–${hora(r.hora_fim)}`
@@ -206,7 +233,8 @@ function Horarios({ c }: { c: Row }) {
               <MapaHorario rows={q.rows} turma={nomeTurma} onAula={setAula} />
             )
           )}
-      {novo && <FormDialog title="Novo tempo lectivo" fields={camposNovo} derivar={derivar} onClose={() => setNovo(false)} onSubmit={(p) => criar.mutateAsync(p)} />}
+      {novo && <FormDialog title="Novo tempo lectivo" fields={camposNovo} derivar={derivar} onClose={() => setNovo(false)} onSubmit={criarNosDias}
+        intro={<span className="mu">A aula fica na sala da turma.</span>} />}
       {aula && (
         <Modal title="Aula no horário" size="sm" onClose={() => setAula(null)} footer={<>
           <Btn variant="ghost" onClick={async () => {
