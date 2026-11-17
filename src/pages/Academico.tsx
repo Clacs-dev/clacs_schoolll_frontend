@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router'
 import { FormDialog, type FieldDef } from '@/components/FormDialog'
+import { MenuAccoes } from '@/components/MenuAccoes'
 import { Modal, ResultDialog } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
@@ -79,14 +80,44 @@ export function Periodos({ ano, onClose }: { ano: Row; onClose: () => void }) {
   )
 }
 
+const SITUACOES = [
+  { value: 'aprovado', label: 'Aprovado' }, { value: 'transita', label: 'Transita (decisão do conselho)' },
+  { value: 'reprovado', label: 'Reprovado' }, { value: 'recurso', label: 'Recurso' }, { value: 'excluido_faltas', label: 'Excluído por faltas' },
+]
+const nomeSituacao = (v: unknown) => SITUACOES.find((s) => s.value === v)?.label ?? label(v)
+
+/** Resultados finais do ano; o conselho de turma pode mudar a situação de um aluno antes da transição. */
 export function Resultados({ ano, onClose }: { ano: Row; onClose: () => void }) {
   const q = useList(`/anos-lectivos/${ano.id}/resultados`)
+  const [mudar, setMudar] = useState<Row | null>(null)
+  const guardar = useAct((v: { r: Row; p: Row }) => api.post(`/anos-lectivos/${ano.id}/resultados/${v.r.matricula_id}/situacao`, v.p),
+    { invalidate: [`/anos-lectivos/${ano.id}/resultados`], ok: 'Situação alterada (fica na auditoria).' })
   return (
     <Modal title={`Resultados finais — ${pick(ano, 'designacao')}`} size="xl" onClose={onClose}>
-      {q.isLoading ? <Loading /> : <Table rows={q.rows} error={q.error} empty="Ainda não há resultados gravados. Feche o ano para os calcular." />}
+      <p className="note" style={{ margin: '0 0 10px' }}>Aprovados e «Transita» passam para a classe seguinte na transição; os restantes ficam como repetentes. Use «⋯ → Alterar situação» para registar uma decisão do conselho de turma.</p>
+      {q.isLoading ? <Loading /> : (
+        <Table rows={q.rows} error={q.error} pageSize={0} empty="Ainda não há resultados gravados. Feche o ano para os calcular." cols={[
+          { h: 'Aluno', k: 'aluno' }, { h: 'Turma', k: 'turma' },
+          { h: 'Média final', render: (r) => (r.media_final ?? '—') },
+          { h: 'Situação', render: (r) => <Estado v={r.situacao === 'transita' ? 'aprovado' : r.situacao} text={nomeSituacao(r.situacao)} /> },
+          { h: '', render: (r) => <MenuAccoes><Btn variant="link" onClick={() => setMudar(r)}>Alterar situação</Btn></MenuAccoes> },
+        ]} />
+      )}
+      {mudar && (
+        <FormDialog title={`Alterar situação — ${mudar.aluno}`} size="sm" initial={{ situacao: mudar.situacao === 'reprovado' ? 'transita' : mudar.situacao }}
+          intro={<span className="mu">Situação calculada: <b>{nomeSituacao(mudar.situacao)}</b> (média {mudar.media_final ?? '—'}).</span>}
+          fields={[
+            { name: 'situacao', label: 'Nova situação', type: 'select', options: SITUACOES, required: true, wide: true },
+            { name: 'motivo', label: 'Motivo', type: 'textarea', required: true, placeholder: 'Ex.: decisão do conselho de turma de 20/07' },
+          ]}
+          onClose={() => setMudar(null)} onSubmit={(p) => guardar.mutateAsync({ r: mudar, p })} />
+      )}
     </Modal>
   )
 }
+
+/** Letra da turma ("5.ª A" → "A"), para sugerir a turma com a mesma letra no ano seguinte. */
+const letraDaTurma = (d: unknown) => (/([A-Za-z]+)\s*$/.exec(String(d ?? ''))?.[1] ?? '').toUpperCase()
 
 export function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onClose: () => void }) {
   const [de, setDe] = useState('')
@@ -96,6 +127,27 @@ export function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onC
   const [res, setRes] = useState<unknown>()
   const antigas = useList(de ? '/turmas' : null, { ano_id: de })
   const novas = useList('/turmas', { ano_id: novo.id })
+  const classes = useList('/classes')
+  /** Sugestão: aprovados → classe seguinte (pela ordem das classes) com a mesma letra; repetentes → mesma classe e letra. */
+  const sugerir = () => {
+    const ordem = classes.rows.map((c) => c.id)
+    const escolher = (classeId: unknown, letra: string) => {
+      const daClasse = novas.rows.filter((t) => t.classe_id === classeId)
+      return String((daClasse.find((t) => letraDaTurma(t.designacao) === letra) ?? daClasse[0])?.id ?? '')
+    }
+    const m: Record<string, string> = {}, r: Record<string, string> = {}
+    for (const t of antigas.rows) {
+      const letra = letraDaTurma(t.designacao)
+      const seguinte = ordem[ordem.indexOf(t.classe_id) + 1]
+      m[t.id] = seguinte !== undefined ? escolher(seguinte, letra) : ''   // última classe: não há para onde transitar
+      r[t.id] = escolher(t.classe_id, letra)
+    }
+    setMap(m)
+    setRep(r)
+  }
+  const prontos = !!de && !antigas.isLoading && !novas.isLoading && !classes.isLoading
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (prontos) sugerir() }, [prontos, de, antigas.rows.length, novas.rows.length])
   const opts = novas.rows.map((t) => ({ value: t.id, label: String(pick(t, 'designacao')) }))
   const run = useAct((p: Row) => api.post(`/anos-lectivos/${novo.id}/transitar`, p), { invalidate: ['/matriculas', '/alunos', '/turmas'], ok: 'Transição concluída.', onDone: setRes })
   const pares = (m: Record<string, string>) => Object.entries(m).filter(([, v]) => v).map(([k, v]) => ({ de: Number(k), para: Number(v) }))
@@ -109,17 +161,19 @@ export function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onC
       footer={<><Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
         <Btn busy={run.isPending} disabled={!de || !pares(map).length} onClick={() => run.mutate({ de_ano_id: Number(de), turmas: pares(map), repetentes: pares(rep), copiar_servicos: copiar })}>Transitar</Btn></>}
     >
-      <p className="sub" style={{ marginTop: 0 }}>Escolha o ano de origem e, para cada turma, a turma de destino. Os repetentes ficam na turma indicada na segunda coluna.</p>
+      <p className="sub" style={{ marginTop: 0 }}>Escolha o ano de origem. As turmas de destino são sugeridas pela ordem das classes (ex.: 5.ª A → 6.ª A; repetentes na 5.ª A do novo ano). Confirme ou ajuste antes de transitar. Para mudar a situação de um aluno, use «Resultados» no ciclo de origem.</p>
       <div className="toolbar">
         <Select label="Ano de origem" value={de} onChange={setDe} placeholder="Ano de origem" options={anos.filter((a) => a.id !== novo.id).map((a) => ({ value: a.id, label: String(pick(a, 'designacao')) }))} />
         <label className="inline-chk"><input type="checkbox" checked={copiar} onChange={(e) => setCopiar(e.target.checked)} /> <span>Copiar serviços (propina, refeitório…)</span></label>
+        {prontos && <Btn variant="ghost" size="sm" onClick={sugerir}>Sugerir de novo</Btn>}
       </div>
       {de && (antigas.isLoading ? <Loading /> : (
+        <>{!novas.rows.length && <p className="note">O ciclo {String(pick(novo, 'designacao'))} ainda não tem turmas: crie-as primeiro (Pedagógico → Turmas, com este ciclo escolhido no topo).</p>}
         <Table rows={antigas.rows} pageSize={0} empty="O ano de origem não tem turmas." cols={[
           { h: 'Turma de origem', k: 'designacao' },
           { h: 'Passa para', render: (r) => <Select label="Destino" value={map[r.id]} onChange={(v) => setMap((m) => ({ ...m, [r.id]: v }))} placeholder="— Não transitar —" options={opts} /> },
           { h: 'Repetentes ficam em', render: (r) => <Select label="Repetentes" value={rep[r.id]} onChange={(v) => setRep((m) => ({ ...m, [r.id]: v }))} placeholder="— Ninguém —" options={opts} /> },
-        ]} />
+        ]} /></>
       ))}
     </Modal>
   )

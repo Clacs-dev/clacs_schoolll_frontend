@@ -193,12 +193,10 @@ function Topo({ onMenu, ciclo }: { onMenu: () => void; ciclo?: boolean }) {
 }
 
 function Lado({ open, children }: { open: boolean; children: ReactNode }) {
-  const { user } = useAuth()
   return (
     <aside className={`side ${open ? 'open' : ''}`} aria-label="Navegação principal">
       <div className="brand">
-        <Logo />
-        <small>{nomeEscola(user)} · Gestão escolar</small>
+        <b>Sistema de Gestão Escolar</b>
       </div>
       {children}
     </aside>
