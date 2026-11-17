@@ -11,6 +11,7 @@ import { useToast } from '@/components/Toast'
 import { num, pick, type Row } from '@/lib/data'
 import { disciplinaOptions, funcionarioOptions, isActivo } from '@/lib/academic'
 import { nomeCiclo, useCicloActual } from '@/lib/ciclos'
+import { dataDoCiclo, horasTexto, useCargasDoHorario, type Carga } from '@/lib/cargas'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { Atribuicoes, comuns, createFields as turmaCreateFields } from './Turmas'
@@ -89,15 +90,6 @@ function Turmas({ c }: { c: Row }) {
 /* ------------ Horários ------------ */
 const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((l, i) => ({ value: i + 1, label: l }))
 
-/** Data em que se consulta o horário: hoje, se cair dentro do ciclo; senão o início (ciclo futuro) ou o fim (ciclo passado). */
-function dataDoCiclo(c: Row) {
-  const d = hoje()
-  const ini = String(pick(c, 'data_inicio') ?? '')
-  const fim = String(pick(c, 'data_fim') ?? '')
-  if (ini && d < ini) return ini
-  if (fim && d > fim) return fim
-  return d
-}
 
 /** Mapa de horário da turma: uma linha por intervalo de horas, uma coluna por dia; cada célula com a disciplina e o professor. */
 function MapaHorario({ rows, turma, onAula }: { rows: Row[]; turma: string; onAula: (r: Row) => void }) {
@@ -257,39 +249,46 @@ function Horarios({ c }: { c: Row }) {
   )
 }
 
-/* ------------ Cargas horárias ------------ */
-function CargasClasse({ classe }: { classe: Row }) {
-  const q = useList(`/classes/${classe.id}/disciplinas`)
-  const [novo, setNovo] = useState(false)
-  const assoc = useAct((p: Row) => api.post(`/classes/${classe.id}/disciplinas`, p), { invalidate: [`/classes/${classe.id}`], ok: 'Disciplina associada.' })
-  const total = q.rows.reduce((s, r) => s + num(r.carga_horaria), 0)
+/* ------------ Cargas horárias (calculadas do horário) ------------ */
+/** Uma turma: para cada disciplina do plano curricular da classe e do horário, os tempos e as horas por semana. */
+function CargasTurma({ turma, cargas, nomes }: { turma: Row; cargas?: Map<unknown, Carga>; nomes: Map<unknown, string> }) {
+  const plano = useList(`/classes/${turma.classe_id}/disciplinas`)
+  const ids = [...new Set([...plano.rows.map((d) => d.id), ...(cargas?.keys() ?? [])])]
+  const linhas = ids.map((id) => {
+    const c = cargas?.get(id)
+    const d = plano.rows.find((x) => x.id === id)
+    return { id, disciplina: String(pick(d, 'nome') ?? nomes.get(id) ?? '—'), sigla: pick(d, 'sigla'), tempos: c?.tempos ?? 0,
+      minutos: c?.minutos ?? 0, professores: c ? [...c.professores].join(', ') : '', noPlano: !!d }
+  }).sort((a, b) => b.tempos - a.tempos || a.disciplina.localeCompare(b.disciplina))
+  const tTotal = linhas.reduce((s, l) => s + l.tempos, 0), mTotal = linhas.reduce((s, l) => s + l.minutos, 0)
   return (
-    <Card title={`${pick(classe, 'designacao', 'nome')}${total ? ` · ${total} tempos por semana` : ''}`} actions={<Btn variant="ghost" size="sm" onClick={() => setNovo(true)}>Associar disciplina</Btn>}>
-      {q.isLoading ? <Loading /> : (
-        <Table rows={q.rows} pageSize={0} empty="Sem disciplinas nesta classe." cols={[
-          { h: 'Disciplina', k: ['nome', 'disciplina'] }, { h: 'Sigla', k: 'sigla' },
-          { h: 'Carga horária semanal', render: (r) => (r.carga_horaria ? `${r.carga_horaria} tempos` : '—') },
+    <Card title={`${pick(turma, 'designacao')} · ${pick(turma, 'classe') ?? ''}${tTotal ? ` · ${tTotal} tempos (${horasTexto(mTotal)}) por semana` : ''}`}>
+      {plano.isLoading ? <Loading /> : (
+        <Table rows={linhas} pageSize={0} empty="Sem disciplinas no plano nem no horário." cols={[
+          { h: 'Disciplina', render: (r) => <>{r.disciplina}{r.sigla ? <span className="mu"> ({r.sigla})</span> : null}</> },
+          { h: 'Tempos / semana', render: (r) => (r.tempos ? r.tempos : <Tag tone="wa">Sem tempos no horário</Tag>) },
+          { h: 'Horas / semana', render: (r) => (r.minutos ? horasTexto(r.minutos) : '—') },
+          { h: 'Professor', render: (r) => r.professores || '—' },
+          { h: '', render: (r) => (!r.noPlano ? <Tag tone="n">Fora do plano curricular</Tag> : null) },
         ]} />
       )}
-      {novo && <FormDialog title={`Associar disciplina — ${pick(classe, 'designacao')}`} size="sm" onClose={() => setNovo(false)} onSubmit={(p) => assoc.mutateAsync(p)} fields={[
-        { name: 'disciplina_id', label: 'Disciplina', type: 'select', options: disciplinaOptions, required: true, wide: true },
-        { name: 'carga_horaria', label: 'Carga horária semanal (tempos)', type: 'number', min: 1 },
-      ]} />}
     </Card>
   )
 }
 
 function Cargas({ c }: { c: Row }) {
-  const turmas = useList('/turmas', { ano_id: c.id })
-  const classes = useList('/classes')
-  if (turmas.isLoading || classes.isLoading) return <Loading />
-  const doCiclo = new Set(turmas.rows.map((t) => t.classe_id))
-  const lista = classes.rows.filter((k) => doCiclo.has(k.id))
+  const { turmas, porTurma, nomeDisciplina, isLoading } = useCargasDoHorario()
+  if (isLoading) return <Loading />
   return (
     <>
-      <p className="note" style={{ margin: '0 0 12px' }}>Carga horária semanal de cada disciplina, por classe das turmas deste ciclo. A carga é definida na classe.</p>
-      {lista.length ? <div style={{ display: 'grid', gap: 16 }}>{lista.map((k) => <CargasClasse key={k.id} classe={k} />)}</div>
-        : <Empty>Este ciclo ainda não tem turmas. As cargas horárias aparecem por classe depois de criar as turmas.</Empty>}
+      <p className="note" style={{ margin: '0 0 12px' }}>
+        Calculada automaticamente a partir do horário em vigor de cada turma do ciclo {nomeCiclo(c)}: cada aula é um tempo,
+        e as horas são a soma da duração das aulas. Para mudar a carga, altere o <Link to="/horarios">horário</Link>.
+      </p>
+      {turmas.length ? <div style={{ display: 'grid', gap: 16 }}>
+        {turmas.map((t) => <CargasTurma key={t.id} turma={t} cargas={porTurma.get(t.id)} nomes={nomeDisciplina} />)}
+      </div>
+        : <Empty>Este ciclo ainda não tem turmas. As cargas horárias aparecem depois de criar as turmas e os horários.</Empty>}
     </>
   )
 }

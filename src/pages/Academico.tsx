@@ -11,6 +11,7 @@ import { num, perfisOf, pick, type Row } from '@/lib/data'
 import { TIPOS_SALA, disciplinaOptions } from '@/lib/academic'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
+import { useCargasDoHorario } from '@/lib/cargas'
 
 type Tab = 'niveis' | 'classes' | 'disciplinas' | 'programas' | 'salas' | 'tempos' | 'professores' | 'funcionarios'
 
@@ -206,7 +207,8 @@ function Programas() {
     const x = tempos.rows.find((t) => t.id === id)
     return x ? `${x.designacao} (${x.duracao_minutos} min)` : '—'
   }
-  const carga = plano.rows.find((d) => String(d.id) === disciplina)?.carga_horaria
+  const cargas = useCargasDoHorario()
+  const carga = classe && disciplina ? cargas.daClasse(Number(classe), Number(disciplina))?.texto : undefined
 
   return (
     <>
@@ -230,7 +232,7 @@ function Programas() {
           beforeCreate={(p) => ({ ...p, classe_id: Number(classe), disciplina_id: Number(disciplina) })}
           deleteName={(r) => String(r.titulo)}
           pageSize={0}
-          hint={<>{q.rows.length} unidade(s){carga ? ` · carga horária da disciplina: ${carga} tempos por semana` : ''}. Em «⋯ → Visualizar» vê os objectivos e conteúdos.</>}
+          hint={<>{q.rows.length} unidade(s){carga ? ` · carga horária (do horário): ${carga} por semana` : ''}. Em «⋯ → Visualizar» vê os objectivos e conteúdos.</>}
           empty="Esta disciplina ainda não tem programa nesta classe."
           expand={(r) => (
             <div style={{ display: 'grid', gap: 8, whiteSpace: 'pre-wrap' }}>
@@ -255,12 +257,14 @@ function Plano({ c, onClose }: { c: Row; onClose: () => void }) {
   const q = useList(`/classes/${c.id}/disciplinas`)
   const [novo, setNovo] = useState(false)
   const assoc = useAct((p: Row) => api.post(`/classes/${c.id}/disciplinas`, p), { invalidate: [`/classes/${c.id}`], ok: 'Disciplina associada.' })
+  const cargas = useCargasDoHorario()
   return (
     <Modal title={`Plano curricular — ${pick(c, 'designacao')}`} size="lg" onClose={onClose} footer={<><Btn variant="ghost" onClick={() => setNovo(true)}>Associar disciplina</Btn><Btn onClick={onClose}>Fechar</Btn></>}>
-      {q.isLoading ? <Loading /> : <Table rows={q.rows} pageSize={0} empty="Sem disciplinas no plano." cols={[{ h: 'Disciplina', k: ['disciplina', 'disciplina.nome', 'nome'] }, { h: 'Sigla', k: ['sigla', 'disciplina.sigla'] }, { h: 'Carga horária', k: 'carga_horaria' }]} />}
+      <p className="note" style={{ margin: '0 0 10px' }}>A carga horária é calculada do horário das turmas desta classe no ciclo {cargas.ciclo ? String(pick(cargas.ciclo, 'designacao')) : 'escolhido'}.</p>
+      {q.isLoading ? <Loading /> : <Table rows={q.rows} pageSize={0} empty="Sem disciplinas no plano." cols={[{ h: 'Disciplina', k: ['disciplina', 'disciplina.nome', 'nome'] }, { h: 'Sigla', k: ['sigla', 'disciplina.sigla'] },
+        { h: 'Carga horária (do horário)', render: (r) => cargas.daClasse(c.id, r.id)?.texto ?? <span className="mu">Ainda sem tempos no horário</span> }]} />}
       {novo && <FormDialog title="Associar disciplina" size="sm" onClose={() => setNovo(false)} onSubmit={(p) => assoc.mutateAsync(p)} fields={[
         { name: 'disciplina_id', label: 'Disciplina', type: 'select', options: disciplinaOptions, required: true, wide: true },
-        { name: 'carga_horaria', label: 'Carga horária semanal', type: 'number' },
       ]} />}
     </Modal>
   )
