@@ -14,9 +14,28 @@ export const tokenStore = {
   },
 }
 
-// O seletor de ano lectivo do topo foi retirado: apaga a escolha que tenha ficado guardada, para que nenhum
-// pedido continue a ir para um ano que não é o activo.
+// Escolha do antigo seletor de ano (substituído pelo seletor de ciclo): não deve voltar a ser usada.
 try { localStorage.removeItem('clacs.ano') } catch { /* sem storage */ }
+
+/**
+ * Ciclo académico em que se trabalha (multi-tenant, como a empresa no CLACS GeoModel). Vai em cada pedido no
+ * cabeçalho X-Ano-Lectivo e o backend mostra e regista tudo nesse ciclo. Ver lib/ciclos.ts.
+ */
+const CICLO_KEY = 'clacs.ciclo'
+const ouvintes = new Set<() => void>()
+export const cicloStore = {
+  get: (): string => {
+    try { return localStorage.getItem(CICLO_KEY) || '' } catch { return '' }
+  },
+  set: (id: string) => {
+    try { id ? localStorage.setItem(CICLO_KEY, id) : localStorage.removeItem(CICLO_KEY) } catch { /* sem storage */ }
+    ouvintes.forEach((f) => f())
+  },
+  subscribe: (f: () => void) => {
+    ouvintes.add(f)
+    return () => { ouvintes.delete(f) }
+  },
+}
 
 export class ApiError extends Error {
   status: number
@@ -81,6 +100,8 @@ async function raw(method: string, path: string, opts: RawOpts = {}) {
   const headers: Record<string, string> = { Accept: 'application/json', ...(opts.headers || {}) }
   const t = tokenStore.get()
   if (t && opts.auth !== false) headers.Authorization = `Bearer ${t}`
+  const ciclo = cicloStore.get()
+  if (ciclo && opts.auth !== false) headers['X-Ano-Lectivo'] = ciclo
   let res: Response
   try {
     res = await fetch(BASE + path + qs(opts.params), { method, headers, body: opts.body ?? undefined })

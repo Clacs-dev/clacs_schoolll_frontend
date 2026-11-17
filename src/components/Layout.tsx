@@ -1,9 +1,10 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { AnimatePresence, m } from 'motion/react'
 import { useAuth } from '@/auth/AuthContext'
 import { nameOf, pick, type Row } from '@/lib/data'
-import { nomeCiclo, useCiclos } from '@/lib/ciclos'
+import { estadoCiclo, nomeCiclo, useCicloActual } from '@/lib/ciclos'
+import { isActivo } from '@/lib/academic'
 import { AuthImage } from './AuthImage'
 import { Pagina, T_NORMAL, T_RAPIDO } from './Motion'
 
@@ -33,23 +34,6 @@ export const Icone = ({ n, size = 18 }: { n: string; size?: number }) => (
 type Item = [string, string, string?]
 type Grupo = { group: string; icon: string; items: Item[] }
 
-/** Entrada "Ciclos académicos": por baixo dela, o menu mostra um submenu com cada ciclo criado. */
-const CICLOS = '/ciclos'
-
-/** Submenu com os ciclos académicos (anos lectivos), do mais recente para o mais antigo. */
-function SubCiclos({ pathname }: { pathname: string }) {
-  const { ciclos } = useCiclos()
-  if (!ciclos.length) return null
-  return (
-    <div className="nav-sub2">
-      {ciclos.map((c) => {
-        const to = `${CICLOS}/${c.id}`
-        return <NavLink key={c.id} to={to} className={() => `nl ${pathname === to ? 'active' : ''}`}>{nomeCiclo(c)}</NavLink>
-      })}
-    </div>
-  )
-}
-
 // Organizado pelos serviços da escola. Um mesmo ecrã com separadores (ex.: /academico) pode aparecer em
 // vários grupos, cada um a abrir o separador desse serviço (?tab=…).
 export const NAV: Grupo[] = [
@@ -58,7 +42,8 @@ export const NAV: Grupo[] = [
     ['/relatorios', 'Relatórios', 'painel'], ['/assistente', 'Assistente', 'painel'],
   ] },
   { group: 'Pedagógico', icon: 'docente', items: [
-    ['/academico', 'Registo académico', 'academico'], [CICLOS, 'Ciclos académicos', 'academico'],
+    ['/academico', 'Registo académico', 'academico'], ['/plano-actividades', 'Plano de actividade', 'pedagogico'],
+    ['/turmas', 'Turmas', 'cadastro'], ['/horarios', 'Horários', 'pedagogico'], ['/cargas-horarias', 'Cargas horárias', 'academico'],
     ['/avaliacoes', 'Avaliações e notas', 'pedagogico'],
     ['/pautas', 'Pautas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'],
     ['/registo-diario', 'Registo diário', 'pedagogico'],
@@ -78,6 +63,7 @@ export const NAV: Grupo[] = [
     ['/mensagens', 'Mensagens e comunicados', 'comunicacao'], ['/regras', 'Regras e modelos', 'comunicacao'],
   ] },
   { group: 'Administrador', icon: 'admin', items: [
+    ['/ciclos', 'Ciclos académicos', 'academico'],
     ['/utilizadores', 'Utilizadores', 'utilizadores'], ['/perfis', 'Perfis e permissões', 'utilizadores'],
     ['/definicoes', 'Definições da escola', 'academico'], ['/academico?tab=salas', 'Salas', 'academico'],
     ['/auditoria', 'Auditoria', 'utilizadores'], ['/importacao', 'Importação de dados', 'importacao'],
@@ -148,7 +134,41 @@ export function Avatar({ user, size = 36 }: { user: Row | null; size?: number })
   )
 }
 
-function Topo({ onMenu }: { onMenu: () => void }) {
+/**
+ * Ciclo académico em que se trabalha, como a empresa no CLACS GeoModel: tudo o que a plataforma mostra e regista
+ * é desse ciclo. Ponto verde = ciclo activo; âmbar = outro ciclo; cinzento = encerrado (só consulta).
+ */
+function SeletorCiclo() {
+  const { ciclos, ciclo, activo, mudar, encerrado } = useCicloActual()
+  if (!ciclo) return null
+  const tom = encerrado ? 'encerrado' : activo && ciclo.id === activo.id ? '' : 'outro'
+  return (
+    <label className={`ciclo-sel ${tom}`} title="Ciclo académico em que está a trabalhar">
+      <span className="ciclo-dot" aria-hidden="true" />
+      <span className="sr-only">Ciclo académico</span>
+      <select value={String(ciclo.id)} onChange={(e) => mudar(e.target.value)}>
+        {ciclos.map((c) => (
+          <option key={c.id} value={String(c.id)}>
+            Ciclo {nomeCiclo(c)}{isActivo(c) ? ' · activo' : estadoCiclo(c) === 'encerrado' ? ' · encerrado' : ''}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+/** Faixa por baixo do topo quando o ciclo escolhido está encerrado: só se pode consultar. */
+function AvisoEncerrado() {
+  const { ciclo, encerrado } = useCicloActual()
+  if (!encerrado || !ciclo) return null
+  return (
+    <div className="ciclo-aviso" role="status">
+      O ciclo <b>{nomeCiclo(ciclo)}</b> está encerrado: só consulta, excepto receber pagamentos das dívidas deste ciclo. Para registar ou alterar outros dados, escolha outro ciclo no topo.
+    </div>
+  )
+}
+
+function Topo({ onMenu, ciclo }: { onMenu: () => void; ciclo?: boolean }) {
   const { user, logout } = useAuth()
   const toggleTheme = useTheme()
   return (
@@ -157,6 +177,7 @@ function Topo({ onMenu }: { onMenu: () => void }) {
         <Icone n="gestao" size={22} />
       </button>
       <span className="grow" />
+      {ciclo && <SeletorCiclo />}
       <button type="button" className="topo-btn" onClick={toggleTheme} aria-label="Alternar tema claro/escuro" title="Alternar tema">
         <Icone n="tema" />
       </button>
@@ -220,11 +241,8 @@ export function Layout() {
                   <m.nav aria-label={g.group} className="nav-sub" key="sub"
                     initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={T_NORMAL}>
                     {itens.map(([to, l]) => (
-                      <Fragment key={to}>
-                        {/* className em função: o NavLink não junta o "active" dele, que só olha para o caminho */}
-                        <NavLink to={to} className={() => `nl ${(to === CICLOS ? loc.pathname === CICLOS : activo(to, loc.pathname, loc.search)) ? 'active' : ''}`}>{l}</NavLink>
-                        {to === CICLOS && <SubCiclos pathname={loc.pathname} />}
-                      </Fragment>
+                      // className em função: o NavLink não junta o "active" dele, que só olha para o caminho
+                      <NavLink key={to} to={to} className={() => `nl ${activo(to, loc.pathname, loc.search) ? 'active' : ''}`}>{l}</NavLink>
                     ))}
                   </m.nav>
                 )}
@@ -235,7 +253,8 @@ export function Layout() {
         <NavLink to="/conta" className={nl}><Icone n="config" /> Configurações</NavLink>
       </Lado>
       <div className="corpo">
-        <Topo onMenu={menu} />
+        <Topo onMenu={menu} ciclo />
+        <AvisoEncerrado />
         <main className="main" id="conteudo"><Pagina key={loc.pathname}><Outlet /></Pagina></main>
       </div>
     </div>

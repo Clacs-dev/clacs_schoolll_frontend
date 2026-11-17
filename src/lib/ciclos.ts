@@ -1,3 +1,6 @@
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { cicloStore } from './api'
 import { pick, type Row } from './data'
 import { isActivo } from './academic'
 import { useList } from './hooks'
@@ -12,7 +15,30 @@ export function useCiclos() {
   return { ...q, ciclos }
 }
 
-export const nomeCiclo = (c: Row | undefined) => String(pick(c, 'designacao', 'nome') ?? (c ? `#${c.id}` : ''))
+/**
+ * Ciclo em que se trabalha (o escolhido no topo; na primeira vez, o activo). Todo o sistema segue este ciclo:
+ * o backend recebe-o em cada pedido (X-Ano-Lectivo).
+ */
+export function useCicloActual() {
+  const { ciclos, isLoading } = useCiclos()
+  const escolhido = useSyncExternalStore(cicloStore.subscribe, cicloStore.get)
+  const qc = useQueryClient()
+  const activo = ciclos.find(isActivo)
+  const ciclo = ciclos.find((c) => String(c.id) === escolhido) ?? activo ?? ciclos[0]
+  const mudar = useCallback((id: string | number) => {
+    if (String(id) === cicloStore.get()) return
+    cicloStore.set(String(id))
+    // Tudo o que estava em memória era do outro ciclo.
+    qc.invalidateQueries({ predicate: (q) => q.queryKey[0] !== '/anos-lectivos' })
+  }, [qc])
+  // Fixa o ciclo (o activo, na primeira vez, ou outro se o escolhido foi apagado) para ir sempre no cabeçalho.
+  useEffect(() => {
+    if (ciclo && String(ciclo.id) !== escolhido) mudar(ciclo.id)
+  }, [ciclo, escolhido, mudar])
+  return { ciclos, ciclo, activo, isLoading, mudar, encerrado: !!ciclo && estadoCiclo(ciclo) === 'encerrado' }
+}
+
+export const nomeCiclo =(c: Row | undefined) => String(pick(c, 'designacao', 'nome') ?? (c ? `#${c.id}` : ''))
 
 export const estadoCiclo = (c: Row) => (isActivo(c) ? 'activo' : String(pick(c, 'estado') ?? 'planeado'))
 

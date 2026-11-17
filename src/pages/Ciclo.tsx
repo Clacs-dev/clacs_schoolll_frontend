@@ -1,20 +1,18 @@
-import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { useState, type ReactNode } from 'react'
+import { Link, useLocation } from 'react-router'
 import { FormDialog, type FieldDef } from '@/components/FormDialog'
 import { ResultDialog, useConfirm } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
-import { Btn, Card, Empty, Estado, Loading, PageHead, Select, Tabs, Tag } from '@/components/ui'
+import { Btn, Card, Empty, Loading, PageHead, Select, Tag } from '@/components/ui'
 import { api } from '@/lib/api'
 import { num, pick, type Row } from '@/lib/data'
 import { disciplinaOptions, funcionarioOptions, isActivo, salaOptions } from '@/lib/academic'
-import { estadoCiclo, nomeCiclo, useCiclos } from '@/lib/ciclos'
+import { nomeCiclo, useCicloActual } from '@/lib/ciclos'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { Atribuicoes, comuns, createFields as turmaCreateFields } from './Turmas'
 import { Periodos, Resultados, Transitar } from './Academico'
-
-type Tab = 'plano' | 'turmas' | 'horarios' | 'cargas'
 
 const hoje = () => new Date().toISOString().slice(0, 10)
 const hora = (v: unknown) => String(v ?? '').slice(0, 5)
@@ -224,7 +222,7 @@ function Cargas({ c }: { c: Row }) {
 }
 
 /* ------------ Gestão do ciclo (antes em "Anos lectivos") ------------ */
-function AccoesCiclo({ c, ciclos }: { c: Row; ciclos: Row[] }) {
+export function AccoesCiclo({ c, ciclos }: { c: Row; ciclos: Row[] }) {
   const confirm = useConfirm()
   const [dlg, setDlg] = useState<'per' | 'res' | 'trans' | null>(null)
   const [fecho, setFecho] = useState<unknown>()
@@ -252,30 +250,24 @@ function AccoesCiclo({ c, ciclos }: { c: Row; ciclos: Row[] }) {
   )
 }
 
-/* ------------ Página do ciclo ------------ */
-export default function Ciclo() {
-  const { id } = useParams()
-  const { ciclos, isLoading } = useCiclos()
-  const [sp, setSp] = useSearchParams()
-  const tab = (sp.get('tab') as Tab) || 'plano'
-  const c = ciclos.find((x) => String(x.id) === id)
+/* ------------ Páginas do ciclo escolhido no topo ------------ */
+const PAGINAS: Record<string, { titulo: string; sub: string; C: (p: { c: Row }) => ReactNode }> = {
+  '/plano-actividades': { titulo: 'Plano de actividade', sub: 'Actividades, reuniões, provas, feriados e interrupções do ciclo.', C: Plano },
+  '/turmas': { titulo: 'Turmas', sub: 'Turmas do ciclo, ocupação e professores por disciplina.', C: Turmas },
+  '/horarios': { titulo: 'Horários', sub: 'Mapa de horário de cada turma do ciclo.', C: Horarios },
+  '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Tempos semanais de cada disciplina, por classe das turmas do ciclo.', C: Cargas },
+}
 
+export default function CicloPagina() {
+  const { pathname } = useLocation()
+  const { ciclo, isLoading } = useCicloActual()
+  const p = PAGINAS[pathname] ?? PAGINAS['/plano-actividades']
   if (isLoading) return <Loading />
-  if (!c) return <Empty>Ciclo académico não encontrado. <Link to="/ciclos">Ver os ciclos</Link></Empty>
-  const estado = estadoCiclo(c)
+  if (!ciclo) return <Empty>Ainda não há ciclos académicos. <Link to="/ciclos">Crie o primeiro ciclo</Link>.</Empty>
   return (
     <>
-      <PageHead
-        title={`Ciclo ${nomeCiclo(c)}`}
-        sub={<>{dataPT(pick(c, 'data_inicio'))} a {dataPT(pick(c, 'data_fim'))} · <Estado v={estado} text={label(estado)} /></>}
-        actions={<AccoesCiclo key={c.id} c={c} ciclos={ciclos} />}
-      />
-      <Tabs<Tab> value={tab} onChange={(t) => setSp({ tab: t }, { replace: true })}
-        tabs={[['plano', 'Plano de actividade'], ['turmas', 'Turmas'], ['horarios', 'Horários'], ['cargas', 'Cargas horárias']]} />
-      {tab === 'plano' && <Plano key={c.id} c={c} />}
-      {tab === 'turmas' && <Turmas key={c.id} c={c} />}
-      {tab === 'horarios' && <Horarios key={c.id} c={c} />}
-      {tab === 'cargas' && <Cargas key={c.id} c={c} />}
+      <PageHead title={p.titulo} sub={<>{p.sub} Ciclo <b>{nomeCiclo(ciclo)}</b> ({dataPT(pick(ciclo, 'data_inicio'))} a {dataPT(pick(ciclo, 'data_fim'))}).</>} />
+      <p.C key={ciclo.id} c={ciclo} />
     </>
   )
 }
