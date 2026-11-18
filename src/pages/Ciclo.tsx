@@ -320,7 +320,8 @@ export function AccoesCiclo({ c, ciclos }: { c: Row; ciclos: Row[] }) {
   return (
     <>
       <div className="row-a" style={{ flexWrap: 'wrap' }}>
-        {!isActivo(c) && <Btn variant="ghost" size="sm" busy={activar.isPending} onClick={() => activar.mutate()}>Activar</Btn>}
+        {!isActivo(c) && String(c.estado) !== 'encerrado' && <Btn variant="ghost" size="sm" busy={activar.isPending} onClick={() => activar.mutate()}
+          title="Só depois de fechar o ciclo activo">Activar</Btn>}
         <Btn variant="ghost" size="sm" onClick={() => setDlg('per')}>Períodos</Btn>
         <Btn variant="ghost" size="sm" onClick={() => setDlg('trans')}>Transitar alunos</Btn>
         <Btn variant="ghost" size="sm" busy={fechar.isPending} onClick={() => fechar.mutate(true)}>Simular fecho</Btn>

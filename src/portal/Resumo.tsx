@@ -2,8 +2,36 @@ import { Link } from 'react-router'
 import { AutoSections } from '@/components/Auto'
 import { Card, Empty, ErrorBox, Estado, Kpi, Loading, PageHead } from '@/components/ui'
 import { asList, nameOf, num, pick, type Row } from '@/lib/data'
-import { Kz } from '@/lib/format'
-import { useGet } from '@/lib/hooks'
+import { Kz, dataPT } from '@/lib/format'
+import { useGet, useList } from '@/lib/hooks'
+
+const TIPOS: Record<string, string> = {
+  evento: 'Actividade', reuniao: 'Reunião', prova: 'Prova / exame', feriado: 'Feriado', interrupcao: 'Interrupção lectiva',
+}
+
+/** Actividades que a escola marcou como visíveis às famílias (Plano de actividade), de hoje em diante. */
+function Actividades() {
+  const q = useList('/portal/calendario')
+  return (
+    <Card title="Próximas actividades da escola">
+      {q.isLoading ? <Loading /> : !q.rows.length ? <Empty>Não há actividades marcadas para os próximos dias.</Empty> : (
+        <ul className="link-list" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+          {q.rows.slice(0, 12).map((e) => (
+            <li key={e.id} className="al" style={{ alignItems: 'flex-start' }}>
+              <div>
+                <b>{e.titulo}</b>
+                <div className="mu" style={{ fontSize: 13 }}>{TIPOS[String(e.tipo)] ?? e.tipo}{e.descricao ? ` · ${e.descricao}` : ''}</div>
+              </div>
+              <span className="mu" style={{ whiteSpace: 'nowrap' }}>
+                {e.data_fim && e.data_fim !== e.data_inicio ? `${dataPT(e.data_inicio)} a ${dataPT(e.data_fim)}` : dataPT(e.data_inicio)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
 
 export default function Resumo() {
   const q = useGet<Row>('/portal/eu')
@@ -39,6 +67,7 @@ export default function Resumo() {
       ) : (
         <Card><Empty>Não encontrámos educandos associados à sua conta.</Empty></Card>
       )}
+      <div style={{ marginTop: 16 }}><Actividades /></div>
       {!educandos.length && <div style={{ marginTop: 16 }}><AutoSections data={d} /></div>}
     </>
   )
