@@ -9,12 +9,21 @@ import { api, errMsg } from '@/lib/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/Toast'
 import { num, pick, type Row } from '@/lib/data'
-import { disciplinaOptions, funcionarioOptions, isActivo } from '@/lib/academic'
+import { classeOptions, disciplinaOptions, funcionarioOptions, isActivo } from '@/lib/academic'
 import { nomeCiclo, useCicloActual } from '@/lib/ciclos'
 import { dataDoCiclo, horasTexto, useCargasDoHorario, type Carga } from '@/lib/cargas'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
-import { Atribuicoes, comuns, createFields as turmaCreateFields } from './Turmas'
+import { Atribuicoes, comuns } from './Turmas'
+
+/** Nome da turma montado pela classe e pela letra, sempre no mesmo formato: «5.ª Classe» + «B» → «5.ª B». */
+const LETRAS = 'ABCDEFGHIJKL'.split('').map((l) => ({ value: l, label: l }))
+const prefixoDaClasse = (designacao: unknown) => String(designacao ?? '').replace(/\s*classe\b.*$/i, '').trim()
+const turmaNovaFields: FieldDef[] = [
+  { name: 'classe_id', label: 'Classe', type: 'select', options: classeOptions, required: true },
+  { name: 'letra', label: 'Turma (letra)', type: 'select', options: LETRAS, required: true, hint: 'O nome fica, por exemplo, «5.ª B»' },
+  ...comuns.filter((f) => f.name !== 'designacao'),
+]
 import { Periodos, Resultados, Transitar } from './Academico'
 
 const hoje = () => new Date().toISOString().slice(0, 10)
@@ -59,6 +68,7 @@ function Plano({ c }: { c: Row }) {
 /* ------------ Turmas ------------ */
 function Turmas({ c }: { c: Row }) {
   const [at, setAt] = useState<Row | null>(null)
+  const classes = useList('/classes')
   return (
     <>
       <Resource
@@ -67,8 +77,12 @@ function Turmas({ c }: { c: Row }) {
         invalidate={['/turmas']}
         search
         createLabel="Nova turma"
-        createFields={turmaCreateFields}
-        beforeCreate={(p) => ({ ...p, ano_id: c.id })}
+        createFields={turmaNovaFields}
+        beforeCreate={(p) => {
+          const { letra, ...resto } = p
+          const classe = classes.rows.find((k) => k.id === p.classe_id)
+          return { ...resto, ano_id: c.id, designacao: `${prefixoDaClasse(pick(classe, 'designacao'))} ${letra}`.trim() }
+        }}
         editFields={comuns}
         editPath={(r) => `/turmas/${r.id}`}
         deletePath={(r) => `/turmas/${r.id}`}
@@ -327,7 +341,7 @@ const PAGINAS: Record<string, { titulo: string; sub: string; C: (p: { c: Row }) 
   '/plano-actividades': { titulo: 'Plano de actividade', sub: 'Actividades, reuniões, provas, feriados e interrupções do ciclo.', C: Plano },
   '/turmas': { titulo: 'Turmas', sub: 'Turmas do ciclo, ocupação e professores por disciplina.', C: Turmas },
   '/horarios': { titulo: 'Horários', sub: 'Mapa de horário de cada turma do ciclo.', C: Horarios },
-  '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Tempos semanais de cada disciplina, por classe das turmas do ciclo.', C: Cargas },
+  '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Tempos e horas semanais de cada disciplina, por turma, calculados do horário.', C: Cargas },
 }
 
 export default function CicloPagina() {
