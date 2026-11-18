@@ -9,7 +9,7 @@ import { api, errMsg } from '@/lib/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/Toast'
 import { num, pick, type Row } from '@/lib/data'
-import { classeOptions, disciplinaOptions, funcionarioOptions, isActivo } from '@/lib/academic'
+import { classeOptions, funcionarioOptions, isActivo, planoOptions } from '@/lib/academic'
 import { nomeCiclo, useCicloActual } from '@/lib/ciclos'
 import { dataDoCiclo, horasTexto, useCargasDoHorario, type Carga } from '@/lib/cargas'
 import { dataPT, label } from '@/lib/format'
@@ -201,7 +201,8 @@ function Horarios({ c }: { c: Row }) {
     return d && v.hora_inicio ? { ...v, hora_fim: somarMinutos(String(v.hora_inicio), Number(d)) } : { ...v, hora_fim: '' }
   }
   const campos: FieldDef[] = [
-    { name: 'disciplina_id', label: 'Disciplina', type: 'select', options: disciplinaOptions, required: true },
+    { name: 'disciplina_id', label: 'Disciplina', type: 'select', required: true, hint: 'Disciplinas do plano curricular da classe',
+      options: planoOptions(turmas.rows.find((x) => String(x.id) === turma)?.classe_id) },
     { name: 'funcionario_id', label: 'Professor', type: 'select', options: { ...funcionarioOptions, params: { cargo: 'professor' } } },
     { name: 'dia_semana', label: 'Dia', type: 'select', options: DIAS, required: true },
     { name: 'tempo', label: 'Tempo', type: 'select', required: true,

@@ -5,7 +5,7 @@ import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
 import { Btn, Loading, PageHead, Select, Tabs, Toolbar } from '@/components/ui'
 import { api } from '@/lib/api'
-import { disciplinaOptions, useAnoActivo, useEscala } from '@/lib/academic'
+import { AVISO_SEM_PLANO, planoOptions, useAnoActivo, useEscala } from '@/lib/academic'
 import { num, pick, type Row } from '@/lib/data'
 import { dataPT, hojeISO } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
@@ -55,14 +55,16 @@ export default function Avaliacoes() {
   const [novo, setNovo] = useState(false)
   const [lancar, setLancar] = useState<Row | null>(null)
   const turmas = useList('/turmas')
-  const disciplinas = useList('/disciplinas')
+  const classeDaTurma = turmas.rows.find((t) => String(t.id) === turma)?.classe_id
+  const disciplinas = useList(classeDaTurma ? `/classes/${classeDaTurma}/disciplinas` : null)
+  const semPlano = !!turma && !disciplinas.isLoading && !disciplinas.rows.length
   const q = useList(turma ? '/avaliacoes' : null, { turma_id: turma, periodo_id: periodo, disciplina_id: disc })
   const criar = useAct((p: Row) => api.post('/avaliacoes', p), { invalidate: ['/avaliacoes'], ok: 'Avaliação criada.' })
 
   return (
     <>
       <PageHead title="Avaliações e notas" sub={`Crie avaliações por turma, disciplina e período${ano ? ` (${pick(ano, 'designacao')})` : ''} e lance as notas.`}
-        actions={tab === 'lista' && <Btn disabled={!turma} onClick={() => setNovo(true)}>Nova avaliação</Btn>} />
+        actions={tab === 'lista' && <Btn disabled={!turma || semPlano} onClick={() => setNovo(true)}>Nova avaliação</Btn>} />
       <Tabs value={tab} onChange={setTab} tabs={[['lista', 'Avaliações'], ['tipos', 'Tipos de avaliação']]} />
       {tab === 'lista' && (
         <>
@@ -71,6 +73,7 @@ export default function Avaliacoes() {
             <Select label="Período" value={periodo} onChange={setPeriodo} placeholder="Todos os períodos" options={periodos.map((p) => ({ value: p.id, label: String(pick(p, 'designacao')) }))} />
             <Select label="Disciplina" value={disc} onChange={setDisc} placeholder="Todas as disciplinas" options={disciplinas.rows.map((d) => ({ value: d.id, label: String(pick(d, 'nome')) }))} />
           </Toolbar>
+          {semPlano && <p className="note" style={{ margin: '0 0 10px' }}>{AVISO_SEM_PLANO}</p>}
           <Table
             rows={q.rows}
             loading={q.isLoading}
@@ -89,7 +92,7 @@ export default function Avaliacoes() {
           {novo && (
             <FormDialog title="Nova avaliação" onClose={() => setNovo(false)} onSubmit={(p) => criar.mutateAsync({ ...p, turma_id: Number(turma) })}
               fields={[
-                { name: 'disciplina_id', label: 'Disciplina', type: 'select', options: disciplinaOptions, required: true },
+                { name: 'disciplina_id', label: 'Disciplina', type: 'select', options: planoOptions(classeDaTurma), required: true, hint: 'Disciplinas do plano curricular da classe' },
                 { name: 'periodo_id', label: 'Período', type: 'select', required: true, default: periodo ? Number(periodo) : undefined, options: periodos.map((p) => ({ value: p.id, label: String(pick(p, 'designacao')) })) },
                 { name: 'tipo_id', label: 'Tipo', type: 'select', required: true, options: { path: '/tipos-avaliacao', label: ['designacao'] } },
                 { name: 'data', label: 'Data', type: 'date', required: true, default: hojeISO() },

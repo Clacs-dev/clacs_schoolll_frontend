@@ -6,7 +6,7 @@ import { Table } from '@/components/Table'
 import { Btn, Loading, PageHead, Tag } from '@/components/ui'
 import { api } from '@/lib/api'
 import { num, pick, type Row } from '@/lib/data'
-import { PERIODOS_DIA, classeOptions, disciplinaOptions, funcionarioOptions, salaOptions } from '@/lib/academic'
+import { AVISO_SEM_PLANO, PERIODOS_DIA, classeOptions, disciplinaOptions, funcionarioOptions, planoOptions, salaOptions } from '@/lib/academic'
 import { label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 
@@ -25,18 +25,25 @@ export const createFields: FieldDef[] = [
 
 export function Atribuicoes({ t, onClose }: { t: Row; onClose: () => void }) {
   const q = useList(`/turmas/${t.id}/atribuicoes`)
+  const plano = useList(`/classes/${t.classe_id}/disciplinas`)
+  // Todas as disciplinas do plano curricular da classe, com o professor atribuído (ou por atribuir).
+  const linhas = plano.rows.map((d) => {
+    const a = q.rows.find((x) => x.disciplina_id === d.id)
+    return { id: d.id, disciplina: d.nome, professor: a ? pick(a, 'professor', 'funcionario', 'funcionario_nome') : null }
+  })
+  const camposPlano = fields.map((f) => (f.name === 'disciplina_id' ? { ...f, options: planoOptions(t.classe_id) } : f))
   const [vals, setVals] = useState<Row>(() => initialValues(fields, {}))
   const atribuir = useAct((p: Row) => api.put(`/turmas/${t.id}/atribuicoes`, p), { invalidate: [`/turmas/${t.id}`], ok: 'Professor atribuído.', onDone: () => setVals(initialValues(fields, {})) })
   return (
     <Modal title={`Disciplinas e professores — ${pick(t, 'designacao')}`} size="lg" onClose={onClose}>
-      {q.isLoading ? <Loading /> : (
+      {q.isLoading || plano.isLoading ? <Loading /> : (
         <Table
-          rows={q.rows}
+          rows={linhas}
           pageSize={0}
-          empty="Ainda não há disciplinas atribuídas a esta turma."
+          empty={AVISO_SEM_PLANO}
           cols={[
-            { h: 'Disciplina', k: ['disciplina', 'disciplina_nome', 'disciplina.nome'] },
-            { h: 'Professor', k: ['funcionario', 'professor', 'funcionario_nome', 'funcionario.nome_completo'] },
+            { h: 'Disciplina', k: 'disciplina' },
+            { h: 'Professor', render: (r) => (r.professor ? String(r.professor) : <Tag tone="wa">Sem professor</Tag>) },
           ]}
         />
       )}
@@ -45,7 +52,7 @@ export function Atribuicoes({ t, onClose }: { t: Row; onClose: () => void }) {
         onSubmit={(e) => { e.preventDefault(); atribuir.mutate(toPayload(fields, vals)) }}
       >
         <h4 style={{ margin: '0 0 8px' }}>Atribuir / substituir professor</h4>
-        <FormFields fields={fields} values={vals} set={(n, v) => setVals((s) => ({ ...s, [n]: v }))} />
+        <FormFields fields={camposPlano} values={vals} set={(n, v) => setVals((s) => ({ ...s, [n]: v }))} />
         <div className="form-f"><Btn type="submit" busy={atribuir.isPending}>Atribuir</Btn></div>
       </form>
     </Modal>

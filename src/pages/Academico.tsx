@@ -197,8 +197,8 @@ function Programas() {
   const classes = useList('/classes')
   const plano = useList(classe ? `/classes/${classe}/disciplinas` : null)
   const todas = useList('/disciplinas')
-  // Disciplinas do plano curricular da classe; sem plano, todas as disciplinas da escola.
-  const discs = plano.rows.length ? plano.rows : todas.rows
+  // Regra: o programa é de uma disciplina do plano curricular da classe.
+  const discs = plano.rows
   const params = { classe_id: classe, disciplina_id: disciplina }
   const q = useList(classe && disciplina ? '/programas' : null, params)
   const ordenar = useOrdenar('/programas', q.rows)

@@ -44,6 +44,9 @@ export const alunoOptions = { path: '/alunos', params: { limit: 500 }, label: ['
 export const encarregadoOptions = { path: '/encarregados', label: ['nome_completo', 'nome'] }
 export const servicoOptions = { path: '/servicos', label: ['nome', 'designacao'] }
 export const disciplinaOptions = { path: '/disciplinas', label: ['nome', 'designacao'] }
+/** Regra: numa turma só se usam as disciplinas do plano curricular da sua classe. */
+export const planoOptions = (classeId: unknown) => ({ path: `/classes/${classeId}/disciplinas`, label: ['nome', 'designacao'] })
+export const AVISO_SEM_PLANO = 'Esta classe ainda não tem disciplinas no plano curricular. Defina-as em Registo académico → Classes → ⋯ → Plano curricular.'
 export const metodoOptions = { path: '/metodos-pagamento', label: ['nome', 'designacao'] }
 export const classeOptions = { path: '/classes', label: ['designacao', 'nome'] }
 export const funcionarioOptions = { path: '/funcionarios', label: ['nome_completo', 'nome'] }
