@@ -12,23 +12,24 @@ export const fichaFields: FieldDef[] = [
   { name: 'tempos_praticos', label: 'Tempos práticos por semana', type: 'number', min: 0, max: 40 },
   { name: 'precedencia', label: 'Precedência obrigatória', placeholder: 'Em branco: Não tem', wide: true },
   { name: 'objectivos', label: 'Objectivos', type: 'textarea', wide: true, hint: 'Um objectivo por linha' },
+  { name: 'programa', label: 'Programa', type: 'textarea', wide: true,
+    hint: 'Cole o programa numerado (1., 1.1., 1.1.1., 1.1.1.1.). Cada número principal é uma unidade; substitui as unidades da disciplina' },
   { name: 'bibliografia', label: 'Bibliografia', type: 'textarea', wide: true, hint: 'Uma obra por linha' },
 ]
 
-/** Subunidades numeradas como no programa oficial: cada linha 1.1, 1.2…; linha começada por «-» é 1.1.1, 1.1.2… */
+/** Subunidades numeradas como no programa oficial: cada linha 1.1., 1.2.…; «-» no início = 1.1.1., «--» = 1.1.1.1. */
 export function numerarConteudos(conteudos: unknown, unidade: number) {
-  const linhas: { nivel: 2 | 3; numero: string; texto: string }[] = []
-  let sub = 0, subsub = 0
+  const linhas: { nivel: number; numero: string; texto: string }[] = []
+  const cont = [0, 0, 0]
   for (const bruta of String(conteudos ?? '').split('\n')) {
     const texto = bruta.trim()
     if (!texto) continue
-    if (texto.startsWith('-') && sub) {
-      subsub += 1
-      linhas.push({ nivel: 3, numero: `${unidade}.${sub}.${subsub}`, texto: texto.replace(/^[-\s]+/, '') })
-    } else {
-      sub += 1; subsub = 0
-      linhas.push({ nivel: 2, numero: `${unidade}.${sub}.`, texto: texto.replace(/^[-\s]+/, '') })
-    }
+    let nivel = Math.min(2 + (texto.length - texto.replace(/^-+/, '').length), 4)
+    while (nivel > 2 && !cont[nivel - 3]) nivel -= 1
+    const i = nivel - 2
+    cont[i] += 1
+    for (let j = i + 1; j < 3; j++) cont[j] = 0
+    linhas.push({ nivel, numero: `${[unidade, ...cont.slice(0, i + 1)].join('.')}.`, texto: texto.replace(/^[-\s]+/, '') })
   }
   return linhas
 }
@@ -48,8 +49,8 @@ export function FichaDisciplina({ classe, disciplina, nomeClasse, nomeDisciplina
   const params = { classe_id: classe, disciplina_id: disciplina }
   const q = useGet<Row | null>('/fichas-disciplina', params)
   const f = q.data ?? null
-  const gravar = useAct((p: Row) => api.put('/fichas-disciplina', { ...p, classe_id: Number(classe), disciplina_id: Number(disciplina) }),
-    { invalidate: ['/fichas-disciplina'], ok: 'Ficha da disciplina guardada.', onDone: () => setEditar(false) })
+  const gravar = useAct((p: Row) => api.put('/fichas-disciplina', { ...p, programa: p.programa || undefined, classe_id: Number(classe), disciplina_id: Number(disciplina) }),
+    { invalidate: ['/fichas-disciplina', '/programas'], ok: 'Ficha da disciplina guardada.', onDone: () => setEditar(false) })
 
   if (q.isLoading) return <Loading />
   const objectivos = lista(f?.objectivos), obras = lista(f?.bibliografia)

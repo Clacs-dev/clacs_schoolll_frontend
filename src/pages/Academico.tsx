@@ -189,7 +189,7 @@ const unidadeFields: FieldDef[] = [
   { name: 'tempo_lectivo_id', label: 'Tempo', type: 'select', hint: 'Tempos registados em «Tempos lectivos»',
     options: { path: '/tempos-lectivos', text: (r: Row) => `${r.designacao} (${r.duracao_minutos} min)` } },
   { name: 'objectivos', label: 'Objectivos', type: 'textarea', wide: true },
-  { name: 'conteudos', label: 'Conteúdos', type: 'textarea', wide: true, hint: 'Um por linha (1.1, 1.2…); comece com «-» para um subponto (1.1.1)' },
+  { name: 'conteudos', label: 'Conteúdos', type: 'textarea', wide: true, hint: 'Um por linha (1.1.); «-» no início para 1.1.1. e «--» para 1.1.1.1.' },
 ]
 
 function Programas() {
