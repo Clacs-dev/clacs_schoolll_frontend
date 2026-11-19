@@ -12,14 +12,13 @@ import { TIPOS_SALA, disciplinaOptions } from '@/lib/academic'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { useCargasDoHorario } from '@/lib/cargas'
-import { FichaDisciplina, numerarConteudos } from './FichaDisciplina'
+import { FichaDisciplina } from './FichaDisciplina'
 
 type Tab = 'niveis' | 'classes' | 'disciplinas' | 'programas' | 'salas' | 'tempos' | 'professores' | 'funcionarios'
 
 /* ------------ Ordem (posição na lista) ------------
    Totalmente automática: ao criar fica no fim; para mudar a posição usa-se «Subir» / «Descer» no menu ⋯
    (a lista é renumerada 1, 2, 3…). Não é o id do registo. */
-const semOrdem = (fs: FieldDef[]) => fs.filter((f) => f.name !== 'ordem')
 
 /** Ordens que aparecem mais de uma vez (dados antigos): mostram-se a vermelho até se corrigir a numeração. */
 function repetidas(rows: Row[]) {
@@ -182,34 +181,13 @@ export function Transitar({ novo, anos, onClose }: { novo: Row; anos: Row[]; onC
 }
 
 /* ------------ Programas das disciplinas ------------ */
-const TRIMESTRES = [{ value: 1, label: '1.º trimestre' }, { value: 2, label: '2.º trimestre' }, { value: 3, label: '3.º trimestre' }]
-const unidadeFields: FieldDef[] = [
-  { name: 'titulo', label: 'Unidade temática', required: true, wide: true, placeholder: 'Ex.: Números naturais' },
-  { name: 'trimestre', label: 'Trimestre', type: 'select', options: TRIMESTRES },
-  { name: 'tempo_lectivo_id', label: 'Tempo', type: 'select', hint: 'Tempos registados em «Tempos lectivos»',
-    options: { path: '/tempos-lectivos', text: (r: Row) => `${r.designacao} (${r.duracao_minutos} min)` } },
-  { name: 'objectivos', label: 'Objectivos', type: 'textarea', wide: true },
-  { name: 'conteudos', label: 'Conteúdos', type: 'textarea', wide: true, hint: 'Um por linha (1.1.); «-» no início para 1.1.1. e «--» para 1.1.1.1.' },
-]
-
 function Programas() {
   const [classe, setClasse] = useState('')
   const [disciplina, setDisciplina] = useState('')
   const classes = useList('/classes')
-  const plano = useList(classe ? `/classes/${classe}/disciplinas` : null)
-  const todas = useList('/disciplinas')
   // Regra: o programa é de uma disciplina do plano curricular da classe.
+  const plano = useList(classe ? `/classes/${classe}/disciplinas` : null)
   const discs = plano.rows
-  const params = { classe_id: classe, disciplina_id: disciplina }
-  const q = useList(classe && disciplina ? '/programas' : null, params)
-  const ordenar = useOrdenar('/programas', q.rows)
-  const tempos = useList('/tempos-lectivos')
-  const nomeTempo = (id: unknown) => {
-    const x = tempos.rows.find((t) => t.id === id)
-    return x ? `${x.designacao} (${x.duracao_minutos} min)` : '—'
-  }
-  const cargas = useCargasDoHorario()
-  const carga = classe && disciplina ? cargas.daClasse(Number(classe), Number(disciplina))?.texto : undefined
 
   return (
     <>
@@ -219,43 +197,11 @@ function Programas() {
         <Select label="Disciplina" value={disciplina} onChange={setDisciplina} placeholder={classe ? 'Escolha a disciplina' : 'Escolha primeiro a classe'}
           options={classe ? discs.map((d) => ({ value: d.id, label: String(pick(d, 'nome', 'designacao')) })) : []} />
       </div>
-      {!(classe && disciplina) ? <Empty>Escolha a classe e a disciplina para ver e criar o programa.</Empty> : (<>
+      {!(classe && disciplina) ? <Empty>Escolha a classe e a disciplina.</Empty> : (
         <FichaDisciplina classe={classe} disciplina={disciplina}
           nomeClasse={String(pick(classes.rows.find((c) => String(c.id) === classe), 'designacao', 'nome') ?? '')}
           nomeDisciplina={String(pick(discs.find((d) => String(d.id) === disciplina), 'nome', 'designacao') ?? '')} />
-        <h4 className="ficha-tit" style={{ margin: '20px 0 8px' }}>PROGRAMA</h4>
-        <Resource
-          path="/programas"
-          params={params}
-          invalidate={['/programas']}
-          crud="/programas"
-          createLabel="Nova unidade"
-          createFields={semOrdem(unidadeFields)}
-          toolbar={ordenar.corrigir}
-          rowActions={ordenar.accoes}
-          editFields={unidadeFields}
-          beforeCreate={(p) => ({ ...p, classe_id: Number(classe), disciplina_id: Number(disciplina) })}
-          deleteName={(r) => String(r.titulo)}
-          pageSize={0}
-          hint={<>{q.rows.length} unidade(s){carga ? ` · carga horária (do horário): ${carga} por semana` : ''}. Em «⋯ → Visualizar» vê os objectivos e conteúdos.</>}
-          empty="Esta disciplina ainda não tem programa nesta classe."
-          expand={(r) => (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {r.objectivos ? <div style={{ whiteSpace: 'pre-wrap' }}><b>Objectivos</b><br />{r.objectivos}</div> : null}
-              <div className="ficha-programa">
-                {numerarConteudos(r.conteudos, Number(r.ordem) || 1).map((l) => (
-                  <div key={l.numero} className={`n${l.nivel}`}>{l.numero} {l.texto}</div>))}
-              </div>
-            </div>
-          )}
-          cols={[
-            { h: 'N.º', render: celOrdem(repetidas(q.rows)) },
-            { h: 'Unidade temática', k: 'titulo' },
-            { h: 'Trimestre', render: (r) => (r.trimestre ? `${r.trimestre}.º` : '—') },
-            { h: 'Tempo', render: (r) => nomeTempo(r.tempo_lectivo_id) },
-          ]}
-        />
-      </>)}
+      )}
     </>
   )
 }

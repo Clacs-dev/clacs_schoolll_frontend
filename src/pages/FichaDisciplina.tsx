@@ -17,23 +17,6 @@ export const fichaFields: FieldDef[] = [
   { name: 'bibliografia', label: 'Bibliografia', type: 'textarea', wide: true, hint: 'Uma obra por linha' },
 ]
 
-/** Subunidades numeradas como no programa oficial: cada linha 1.1., 1.2.…; «-» no início = 1.1.1., «--» = 1.1.1.1. */
-export function numerarConteudos(conteudos: unknown, unidade: number) {
-  const linhas: { nivel: number; numero: string; texto: string }[] = []
-  const cont = [0, 0, 0]
-  for (const bruta of String(conteudos ?? '').split('\n')) {
-    const texto = bruta.trim()
-    if (!texto) continue
-    let nivel = Math.min(2 + (texto.length - texto.replace(/^-+/, '').length), 4)
-    while (nivel > 2 && !cont[nivel - 3]) nivel -= 1
-    const i = nivel - 2
-    cont[i] += 1
-    for (let j = i + 1; j < 3; j++) cont[j] = 0
-    linhas.push({ nivel, numero: `${[unidade, ...cont.slice(0, i + 1)].join('.')}.`, texto: texto.replace(/^[-\s]+/, '') })
-  }
-  return linhas
-}
-
 const lista = (v: unknown) => String(v ?? '').split('\n').map((x) => x.trim().replace(/^[•-]\s*/, '')).filter(Boolean)
 const tempos = (t: unknown, p: unknown) => {
   const partes = [t ? `${t} teórico${Number(t) !== 1 ? 's' : ''}` : '', p ? `${p} prático${Number(p) !== 1 ? 's' : ''}` : ''].filter(Boolean)
@@ -54,6 +37,11 @@ export function FichaDisciplina({ classe, disciplina, nomeClasse, nomeDisciplina
 
   if (q.isLoading) return <Loading />
   const objectivos = lista(f?.objectivos), obras = lista(f?.bibliografia)
+  // Programa em texto numerado (vem da API): o nível é o número de partes do número (1. = unidade, 1.1. = 2, …).
+  const programa = String(f?.programa ?? '').split('\n').filter((l) => l.trim()).map((texto) => {
+    const num = /^(\d+(?:\.\d+)*)\./.exec(texto.trim())
+    return { nivel: num ? num[1].split('.').length : 2, texto: texto.trim() }
+  })
   return (
     <Card title="Ficha da disciplina" actions={<div className="row-a">
       <Btn variant="ghost" size="sm" onClick={() => api.download('/fichas-disciplina/programa.pdf', params)
@@ -71,6 +59,12 @@ export function FichaDisciplina({ classe, disciplina, nomeClasse, nomeDisciplina
       </table>
       <h4 className="ficha-tit">OBJECTIVOS</h4>
       {objectivos.length ? <ul className="ficha-lista">{objectivos.map((x, i) => <li key={i}>{x}</li>)}</ul> : <p className="mu">—</p>}
+      <h4 className="ficha-tit">PROGRAMA</h4>
+      {programa.length ? (
+        <div className="ficha-programa">
+          {programa.map((l, i) => <div key={i} className={`n${l.nivel}`}>{l.texto}</div>)}
+        </div>
+      ) : <p className="mu">—</p>}
       <h4 className="ficha-tit">BIBLIOGRAFIA</h4>
       {obras.length ? <ul className="ficha-lista">{obras.map((x, i) => <li key={i}>{x}</li>)}</ul> : <p className="mu">—</p>}
       {editar && <FormDialog title={`Ficha de ${nomeDisciplina} — ${nomeClasse}`} fields={fichaFields} size="lg"
