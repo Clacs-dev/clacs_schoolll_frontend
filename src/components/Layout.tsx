@@ -49,13 +49,13 @@ export const NAV: Grupo[] = [
     ['/registo-diario', 'Registo diário', 'pedagogico'],
   ] },
   { group: 'Secretaria', icon: 'secretaria', items: [
-    ['/candidaturas', 'Candidaturas', 'candidaturas'], ['/matriculas', 'Matrículas e renovações', 'cadastro'],
+    ['/secretaria', 'Painel da secretaria', 'cadastro'], ['/candidaturas', 'Candidaturas', 'candidaturas'], ['/matriculas', 'Matrículas e renovações', 'cadastro'],
     ['/alunos', 'Processos dos alunos', 'cadastro'], ['/encarregados', 'Encarregados', 'cadastro'],
-    ['/pedidos', 'Pedidos e declarações', 'cadastro'], ['/ocorrencias', 'Ocorrências', 'pedagogico'],
+    ['/pedidos', 'Pedidos e declarações', 'cadastro'], ['/ocorrencias', 'Ocorrências', 'pedagogico'], ['/saude', 'Saúde escolar', 'saude'],
     ['/transporte', 'Transporte', 'transporte'],
   ] },
   { group: 'Financeiro', icon: 'financeiro', items: [
-    ['/cobrancas', 'Propinas e cobranças', 'propinas'], ['/pagamentos', 'Pagamentos', 'propinas'],
+    ['/cobrancas', 'Propinas e cobranças', 'propinas'], ['/pagamentos', 'Pagamentos', 'propinas'], ['/acordos', 'Acordos de pagamento', 'propinas'], ['/orcamento', 'Orçamento e despesas', 'propinas'],
     ['/refeitorio', 'Refeitório e serviços', 'refeitorio'], ['/catalogo', 'Serviços e preços', 'propinas'],
     ['/primavera', 'Integração Primavera', 'primavera'],
   ] },

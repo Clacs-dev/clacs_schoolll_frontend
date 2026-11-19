@@ -6,7 +6,8 @@ import { Table } from '@/components/Table'
 import { Btn, Estado, Kpi, PageHead, SearchBox, Select, Toolbar } from '@/components/ui'
 import { api, errMsg } from '@/lib/api'
 import { CANAIS, alunoOptions, servicoOptions } from '@/lib/academic'
-import { num, pick, type Row } from '@/lib/data'
+import { num, perfisOf, pick, type Row } from '@/lib/data'
+import { useAuth } from '@/auth/AuthContext'
 import { Kz, dataPT, hojeISO, mesAno } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { useToast } from '@/components/Toast'
@@ -63,6 +64,11 @@ export default function Cobrancas() {
   const avulsa = useAct((p: Row) => api.post('/cobrancas', p), { invalidate: inv, ok: 'Cobrança criada.' })
   const multas = useAct(() => api.post('/cobrancas/aplicar-multas'), { invalidate: inv, silent: true, onDone: (r) => setRes({ t: 'Multas por atraso aplicadas', d: r ?? 'Concluído.' }) })
   const anular = useAct((id: number) => api.post(`/cobrancas/${id}/anular`), { invalidate: inv, ok: 'Cobrança anulada.' })
+  const [isentar, setIsentar] = useState<Row | null>(null)
+  const isentarMulta = useAct((p: Row) => api.post(`/cobrancas/${cobrancaId(isentar!)}/isentar-multa`, p),
+    { invalidate: inv, ok: 'Multa retirada (excepção registada).', onDone: () => setIsentar(null) })
+  const { user } = useAuth()
+  const aprovador = perfisOf(user).some((x) => x === 'admin' || x === 'direccao')
   const lembrete = useAct((p: Row) => api.post('/cobrancas/lembretes', p), { invalidate: ['/mensagens'], silent: true, onDone: (r) => setRes({ t: 'Lembretes enviados', d: r ?? 'Concluído.' }) })
 
   const exportar = async (formato: 'xlsx' | 'csv') => {
@@ -143,14 +149,18 @@ export default function Cobrancas() {
             render: (r) => (
               <span onClick={(e) => e.stopPropagation()}>
                 {!['anulada', 'anulado', 'pago', 'paga'].includes(estadoCobranca(r)) && (
-                  <Btn variant="link" onClick={async () => { if (await confirm({ title: 'Anular cobrança', text: 'Anular esta cobrança?', danger: true, yes: 'Anular' })) anular.mutate(r.id) }}>Anular</Btn>
+                  <Btn variant="link" onClick={async () => { if (await confirm({ title: 'Anular cobrança', text: 'Anular esta cobrança?', danger: true, yes: 'Anular' })) anular.mutate(cobrancaId(r)) }}>Anular</Btn>
                 )}
+                {aprovador && Number(pick(r, 'valor_multa')) > 0 && <Btn variant="link" onClick={() => setIsentar(r)}>Isentar multa</Btn>}
               </span>
             ),
           },
         ]}
       />
 
+      {isentar && <FormDialog title={`Isentar a multa: ${pick(isentar, 'aluno') ?? ''} (${Kz(pick(isentar, 'valor_multa'))})`} submitLabel="Isentar"
+        fields={[{ name: 'motivo', label: 'Justificação', type: 'textarea', required: true, wide: true, hint: 'Fica no histórico e na auditoria' }]}
+        onSubmit={(p) => isentarMulta.mutateAsync(p)} onClose={() => setIsentar(null)} />}
       {dlg === 'gerar' && <MapaCobranca invalidate={inv} onClose={() => setDlg(null)} onDone={setGerado} />}
       {gerado && (
         <Modal title="Mapa de cobrança gerado" onClose={() => setGerado(null)} footer={<Btn onClick={() => setGerado(null)}>Fechar</Btn>}>

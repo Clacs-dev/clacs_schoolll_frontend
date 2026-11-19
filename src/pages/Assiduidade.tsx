@@ -90,13 +90,42 @@ function Consulta() {
   )
 }
 
+/** Relatório por aluno e disciplina: presenças, atrasos e faltas num período. */
+function Relatorio() {
+  const [turma, setTurma] = useState('')
+  const [desde, setDesde] = useState(primeiroDiaMesISO())
+  const [ate, setAte] = useState(hojeISO())
+  const turmas = useList('/turmas')
+  const q = useList(turma ? '/assiduidade/relatorio' : null, { turma_id: turma, desde, ate })
+  return (
+    <>
+      <Toolbar>
+        <Select label="Turma" value={turma} onChange={setTurma} placeholder="Escolha a turma" options={turmas.rows.map((t) => ({ value: t.id, label: String(pick(t, 'designacao')) }))} />
+        <label className="row-a" style={{ alignItems: 'center' }}>De <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
+        <label className="row-a" style={{ alignItems: 'center' }}>A <input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></label>
+      </Toolbar>
+      <Table rows={q.rows} rowKey={(r, i) => `${r.aluno_id}-${r.disciplina_id ?? 'dia'}-${i}`} loading={q.isLoading} error={q.error} pageSize={0}
+        empty={turma ? 'Sem registos de assiduidade neste período.' : 'Escolha a turma.'} cols={[
+          { h: 'Aluno', k: 'aluno' },
+          { h: 'Disciplina', render: (r) => String(r.disciplina ?? 'Dia inteiro') },
+          { h: 'Presenças', right: true, render: (r) => String(r.presente) },
+          { h: 'Atrasos', right: true, render: (r) => String(r.atraso) },
+          { h: 'Faltas justificadas', right: true, render: (r) => String(r.falta_justificada) },
+          { h: 'Faltas injustificadas', right: true, render: (r) => (Number(r.falta_injustificada) ? <b>{String(r.falta_injustificada)}</b> : '0') },
+        ]} />
+    </>
+  )
+}
+
+const primeiroDiaMesISO = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString('sv-SE') }
+
 export default function Assiduidade() {
-  const [tab, setTab] = useState<'chamada' | 'consulta'>('chamada')
+  const [tab, setTab] = useState<'chamada' | 'consulta' | 'relatorio'>('chamada')
   return (
     <>
       <PageHead title="Assiduidade" sub="Chamada diária por turma e consulta do histórico de faltas." />
-      <Tabs value={tab} onChange={setTab} tabs={[['chamada', 'Fazer chamada'], ['consulta', 'Histórico']]} />
-      {tab === 'chamada' ? <Chamada /> : <Consulta />}
+      <Tabs value={tab} onChange={setTab} tabs={[['chamada', 'Fazer chamada'], ['consulta', 'Histórico'], ['relatorio', 'Relatório por disciplina']]} />
+      {tab === 'chamada' ? <Chamada /> : tab === 'consulta' ? <Consulta /> : <Relatorio />}
     </>
   )
 }
