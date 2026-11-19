@@ -72,14 +72,9 @@ function Turmas({ c }: { c: Row }) {
 const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((l, i) => ({ value: i + 1, label: l }))
 
 
-/** Mapa de horário da turma: uma linha por intervalo de horas, uma coluna por dia; cada célula com a disciplina e o professor. */
-function MapaHorario({ rows, turma, onAula }: { rows: Row[]; turma: string; onAula: (r: Row) => void }) {
-  const discs = useList('/disciplinas')
-  const sigla = (r: Row) => {
-    const d = discs.rows.find((x) => x.id === r.disciplina_id)
-    return String(pick(d, 'sigla') || r.disciplina || '').toUpperCase()
-  }
-  const primeiroNome = (n: unknown) => String(n ?? '').trim().split(/\s+/)[0] ?? ''
+/** Mapa de horário da turma (como o mapa em papel): uma linha por intervalo de horas, uma coluna por dia; em cada aula
+ *  a disciplina por extenso, a sala quando não é a da turma e o nome completo do professor. */
+function MapaHorario({ rows, turma, salaTurma, onAula }: { rows: Row[]; turma: string; salaTurma: unknown; onAula: (r: Row) => void }) {
   const dias = DIAS.filter((d) => d.value <= 5 || rows.some((r) => r.dia_semana === d.value))
   const faixas = [...new Map(rows.map((r) => [`${hora(r.hora_inicio)}–${hora(r.hora_fim)}`, r])).keys()].sort()
   const celula = (faixa: string, dia: number) => rows.filter((r) => r.dia_semana === dia && `${hora(r.hora_inicio)}–${hora(r.hora_fim)}` === faixa)
@@ -98,9 +93,10 @@ function MapaHorario({ rows, turma, onAula }: { rows: Row[]; turma: string; onAu
               {dias.map((d) => (
                 <td key={d.value}>
                   {celula(f, d.value).map((r) => (
-                    <button type="button" key={r.id} className="mh-aula" title={`${r.disciplina}${r.professor ? ` — ${r.professor}` : ''} (clique para editar ou retirar)`} onClick={() => onAula(r)}>
-                      <b>{sigla(r)}</b>
-                      <span>{primeiroNome(r.professor).toUpperCase() || '—'}</span>
+                    <button type="button" key={r.id} className="mh-aula" title="Clique para editar ou retirar do horário" onClick={() => onAula(r)}>
+                      <b>{String(r.disciplina ?? '').toUpperCase()}</b>
+                      {r.sala_id && r.sala_id !== salaTurma && <em>({String(r.sala ?? '')})</em>}
+                      <span>{String(r.professor ?? 'Professor por atribuir')}</span>
                     </button>
                   ))}
                 </td>
@@ -109,7 +105,7 @@ function MapaHorario({ rows, turma, onAula }: { rows: Row[]; turma: string; onAu
           ))}
         </tbody>
       </table>
-      <p className="note" style={{ margin: '8px 0 0' }}>Clique numa aula para a editar ou retirar do horário. Passe o rato por cima para ver o nome completo.</p>
+      <p className="note" style={{ margin: '8px 0 0' }}>Clique numa aula para a editar ou retirar do horário.</p>
     </div>
   )
 }
@@ -192,6 +188,9 @@ function Horarios({ c }: { c: Row }) {
         <Select label="Turma" value={turma} onChange={setTurma} placeholder={turmas.isLoading ? 'A carregar…' : 'Escolha a turma'}
           options={turmas.rows.map((t) => ({ value: t.id, label: String(pick(t, 'designacao')) }))} />
         <span className="grow" />
+        {turma && <Btn variant="ghost" disabled={!q.rows.length}
+          onClick={() => api.download(`/turmas/${turma}/horario.pdf`, { data }).catch((e) => toast.error(errMsg(e)))}>
+          Baixar horário (PDF)</Btn>}
         {turma && <Btn disabled={semTempos} onClick={() => setNovo(true)}>Novo tempo lectivo</Btn>}
       </div>
       {semTempos && (
@@ -204,7 +203,8 @@ function Horarios({ c }: { c: Row }) {
         : !turma ? <Empty>Escolha uma turma para ver o horário.</Empty>
           : (
             q.isLoading ? <Loading /> : !q.rows.length ? <Empty>Esta turma ainda não tem horário.</Empty> : (
-              <MapaHorario rows={q.rows} turma={nomeTurma} onAula={setAula} />
+              <MapaHorario rows={q.rows} turma={nomeTurma} onAula={setAula}
+                salaTurma={pick(turmas.rows.find((t) => String(t.id) === turma), 'sala_id')} />
             )
           )}
       {novo && <FormDialog title="Novo tempo lectivo" fields={camposNovo} derivar={derivar} onClose={() => setNovo(false)} onSubmit={criarNosDias}
