@@ -106,7 +106,6 @@ function MapaHorario({ rows, turma, salaTurma, onAula }: { rows: Row[]; turma: s
           ))}
         </tbody>
       </table>
-      <p className="note" style={{ margin: '8px 0 0' }}>Clique numa aula para a editar ou retirar do horário.</p>
     </div>
   )
 }
@@ -274,10 +273,6 @@ function CargasPorTurma({ c }: { c: Row }) {
   if (isLoading) return <Loading />
   return (
     <>
-      <p className="note" style={{ margin: '0 0 12px' }}>
-        Calculada automaticamente a partir do horário em vigor de cada turma do ciclo {nomeCiclo(c)}: cada aula é um tempo,
-        e as horas são a soma da duração das aulas. Para mudar a carga, altere o <Link to="/horarios">horário</Link>.
-      </p>
       {turmas.length ? <div style={{ display: 'grid', gap: 16 }}>
         {turmas.map((t) => <CargasTurma key={t.id} turma={t} cargas={porTurma.get(t.id)} nomes={nomeDisciplina} />)}
       </div>
@@ -318,10 +313,10 @@ export function AccoesCiclo({ c, ciclos }: { c: Row; ciclos: Row[] }) {
 
 /* ------------ Páginas do ciclo escolhido no topo ------------ */
 const PAGINAS: Record<string, { titulo: string; sub: string; C: (p: { c: Row }) => ReactNode }> = {
-  '/plano-actividades': { titulo: 'Plano de actividade', sub: 'Calendário do ano lectivo: matrículas, aulas, provas, exames, recurso, pausas e férias, semana a semana.', C: Plano },
+  '/plano-actividades': { titulo: 'Plano de actividade', sub: 'Calendário do ano lectivo.', C: Plano },
   '/turmas': { titulo: 'Turmas', sub: 'Turmas do ciclo, ocupação e professores por disciplina.', C: Turmas },
   '/horarios': { titulo: 'Horários', sub: 'Mapa de horário de cada turma do ciclo.', C: Horarios },
-  '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Carga horária semanal de cada professor (e de cada turma), calculada do horário.', C: Cargas },
+  '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Carga horária semanal por professor e por turma.', C: Cargas },
 }
 
 export default function CicloPagina() {

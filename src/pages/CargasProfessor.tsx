@@ -89,15 +89,11 @@ export function CargasPorProfessor({ c }: { c: Row }) {
 
   if (horarios.isLoading) return <Loading />
   if (!horarios.rows.length) {
-    return <Empty>O ciclo {nomeCiclo(c)} ainda não tem horários. A carga horária de cada professor aparece depois de criar os <Link to="/horarios">horários</Link> das turmas.</Empty>
+    return <Empty>O ciclo {nomeCiclo(c)} ainda não tem <Link to="/horarios">horários</Link>.</Empty>
   }
   return (
     <>
-      <p className="note" style={{ margin: '0 0 12px' }}>
-        Calculada do horário em vigor a {data.split('-').reverse().join('/')}: cada aula é um tempo e as horas são a soma da
-        duração das aulas. Para mudar a carga, altere o <Link to="/horarios">horário</Link> das turmas.
-        {semProfessor ? ` Há ${semProfessor} aula(s) sem professor atribuído.` : ''}
-      </p>
+      {semProfessor ? <p className="note" style={{ margin: '0 0 12px' }}>{semProfessor} aula(s) sem professor atribuído.</p> : null}
       <Table rows={cargas} pageSize={0} onRow={(r) => setProf(String(r.id))} empty="Nenhuma aula tem professor atribuído." cols={[
         { h: 'Professor', render: (r) => <b>{r.professor}</b> },
         { h: 'Unidades curriculares', render: (r) => [...(r.disciplinas as Set<string>)].sort().join(', ') },
@@ -107,7 +103,7 @@ export function CargasPorProfessor({ c }: { c: Row }) {
       ]} />
 
       <div className="toolbar" style={{ marginTop: 20 }}>
-        <Select label="Professor" value={prof} onChange={setProf} placeholder="Escolha o professor para ver o horário"
+        <Select label="Professor" value={prof} onChange={setProf} placeholder="Escolha o professor"
           options={cargas.map((x) => ({ value: String(x.id), label: x.professor }))} />
         <span className="grow" />
         {escolhido && <Btn variant="ghost" onClick={() => api.download(`/professores/${prof}/horario.pdf`, { data })
@@ -122,7 +118,7 @@ export function CargasPorProfessor({ c }: { c: Row }) {
           </div>
           <GrelhaProfessor escola={horarios.rows} aulas={aulas} siglas={siglas} />
         </Card>
-      ) : <Empty>Clique num professor da lista (ou escolha-o acima) para ver o horário e baixar o PDF.</Empty>}
+      ) : null}
     </>
   )
 }

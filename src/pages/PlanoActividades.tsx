@@ -151,10 +151,6 @@ function CopiarPlano({ c, onClose }: { c: Row; onClose: () => void }) {
       <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
       <Btn disabled={!origem} busy={copiar.isPending} onClick={() => copiar.mutate()}>Copiar</Btn>
     </>}>
-      <p className="note" style={{ marginTop: 0 }}>
-        As actividades passam para o ciclo {nomeCiclo(c)} com as datas avançadas o mesmo número de semanas (uma reunião à
-        segunda-feira continua à segunda-feira). Os feriados ficam no mesmo dia e mês. O que já existe não é repetido.
-      </p>
       {ciclos.length
         ? <Select label="Ciclo de origem" placeholder="Escolha o ciclo…" value={origem} onChange={setOrigem}
           options={ciclos.map((x) => ({ value: String(x.id), label: nomeCiclo(x) }))} />
@@ -188,7 +184,7 @@ export function Plano({ c }: { c: Row }) {
         {periodos.map((p) => <Kpi key={String(p.id)} label={String(p.designacao)} value={`${p.semanas_lectivas} semanas`}
           hint={`${dataPT(p.data_inicio)} a ${dataPT(p.data_fim)} · ${p.dias_lectivos} dias com aulas`} />)}
       </div>
-      {cal.data && !periodos.length && <p className="note">Este ciclo ainda não tem trimestres: crie-os em Ciclos académicos → Períodos para numerar as semanas lectivas.</p>}
+      {cal.data && !periodos.length && <p className="note">Este ciclo ainda não tem trimestres (Períodos).</p>}
 
       <div className="plano-barra">
         <Tabs<Vista> tabs={[['semanas', 'Por semanas'], ['mes', 'Calendário mensal'], ['lista', 'Lista']]} value={vista} onChange={setVista} />
