@@ -2,12 +2,39 @@ import { useMemo, useState } from 'react'
 import { FormDialog } from '@/components/FormDialog'
 import { Modal } from '@/components/Modal'
 import { Table } from '@/components/Table'
-import { Btn, Estado, KV, PageHead, Select, Toolbar } from '@/components/ui'
+import { Btn, Card, Estado, KV, PageHead, Select, Tag, Toolbar } from '@/components/ui'
 import { api } from '@/lib/api'
-import { pick, type Row } from '@/lib/data'
+import { asList, pick, type Row } from '@/lib/data'
 import { Kz, dataPT, mesAno } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { cobrancaId, emDivida, estadoCobranca } from '@/pages/Cobrancas'
+
+const ESTADO_PRESTACAO: Record<string, string> = { paga: 'Paga', parcial: 'Paga em parte', pendente: 'Por pagar', atrasada: 'Em atraso' }
+const TOM_PRESTACAO: Record<string, string> = { paga: 'pago', parcial: 'parcial', pendente: 'pendente', atrasada: 'atrasada' }
+
+/** Acordos de pagamento em prestações combinados com a escola. */
+function Acordos() {
+  const q = useList('/portal/acordos')
+  if (!q.rows.length) return null
+  return (
+    <div className="stack" style={{ marginTop: 20 }}>
+      {q.rows.map((a) => (
+        <Card key={String(a.id)} title={`Acordo de pagamento · ${Kz(a.valor_total)}`}
+          actions={a.incumprimento ? <Tag tone="er">{String(a.prestacoes_atrasadas)} prestação(ões) em atraso</Tag>
+            : <Tag tone={a.estado === 'cumprido' ? 'ok' : 'n'}>{a.estado === 'cumprido' ? 'Cumprido' : a.estado === 'cancelado' ? 'Cancelado' : 'Em curso'}</Tag>}>
+          <p style={{ marginTop: 0 }}>{String(a.motivo ?? '')} · Pago: <b>{Kz(a.pago)}</b> · Falta: <b>{Kz(a.saldo)}</b></p>
+          <Table rows={asList(a.prestacoes)} pageSize={0} cols={[
+            { h: 'Prestação', render: (p) => `${p.numero}.ª` },
+            { h: 'Vencimento', render: (p) => dataPT(p.vencimento) },
+            { h: 'Valor', right: true, render: (p) => Kz(p.valor) },
+            { h: 'Pago', right: true, render: (p) => Kz(p.pago) },
+            { h: 'Estado', render: (p) => <Estado v={TOM_PRESTACAO[String(p.estado)] ?? p.estado} text={ESTADO_PRESTACAO[String(p.estado)] ?? String(p.estado)} /> },
+          ]} />
+        </Card>
+      ))}
+    </div>
+  )
+}
 
 export default function PortalCobrancas() {
   const [estado, setEstado] = useState('')
@@ -49,6 +76,7 @@ export default function PortalCobrancas() {
           { h: 'Estado', render: (r) => <Estado v={estadoCobranca(r)} /> },
         ]}
       />
+      <Acordos />
       {ref && (
         <Modal title="Referência de pagamento" onClose={() => setRef(null)} footer={<Btn onClick={() => setRef(null)}>Fechar</Btn>}>
           <p style={{ marginTop: 0 }}>Pague num ATM, no Multicaixa Express ou em qualquer agente com os dados abaixo. O pagamento é confirmado automaticamente.</p>

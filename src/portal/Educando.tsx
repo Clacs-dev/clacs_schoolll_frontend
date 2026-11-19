@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { AutoSections } from '@/components/Auto'
 import { FormDialog } from '@/components/FormDialog'
 import { Table, autoCols } from '@/components/Table'
 import { useToast } from '@/components/Toast'
@@ -9,8 +8,9 @@ import { api, errMsg } from '@/lib/api'
 import { asList, nameOf, num, pick, type Row } from '@/lib/data'
 import { dataPT, fmtNota } from '@/lib/format'
 import { useAct, useGet } from '@/lib/hooks'
+import { DocumentosEducando, FichaEducando, HorarioEducando, SaudeEducando, SituacaoEducando } from './EducandoExtra'
 
-type Tab = 'geral' | 'pauta' | 'notas' | 'mac' | 'provas' | 'professores' | 'transporte'
+type Tab = 'geral' | 'horario' | 'pauta' | 'notas' | 'mac' | 'provas' | 'professores' | 'saude' | 'documentos' | 'ficha' | 'transporte'
 const estrelas = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n)
 
 /** Pauta do educando: média de cada disciplina nos trimestres, média final e situação. */
@@ -153,10 +153,15 @@ export default function Educando() {
       <PageHead title={nome} sub={<Link to="/portal">← Resumo</Link>}
         actions={<Btn variant="ghost" onClick={() => pdf(`/portal/educandos/${id}/extracto.pdf`)}>Extracto (PDF)</Btn>} />
       <Tabs<Tab> value={tab} onChange={setTab} tabs={[
-        ['geral', 'Situação'], ['pauta', 'Pauta'], ['notas', 'Notas e boletim'], ['mac', 'MAC'],
-        ['provas', 'Provas marcadas'], ['professores', 'Professores'], ['transporte', 'Transporte'],
+        ['geral', 'Situação'], ['horario', 'Horário'], ['pauta', 'Pauta'], ['notas', 'Notas e boletim'], ['mac', 'MAC'],
+        ['provas', 'Provas marcadas'], ['professores', 'Professores'], ['saude', 'Saúde'], ['documentos', 'Documentos'],
+        ['ficha', 'Ficha do aluno'], ['transporte', 'Transporte'],
       ]} />
-      {tab === 'geral' && <AutoSections data={q.data} skip={['id', 'aluno_id']} />}
+      {tab === 'geral' && <SituacaoEducando d={q.data} />}
+      {tab === 'horario' && <HorarioEducando id={id} />}
+      {tab === 'saude' && <SaudeEducando id={id} />}
+      {tab === 'documentos' && <DocumentosEducando id={id} />}
+      {tab === 'ficha' && <FichaEducando id={id} />}
       {tab === 'pauta' && <Pauta id={id} />}
       {tab === 'mac' && <Mac id={id} />}
       {tab === 'provas' && <Provas id={id} />}
