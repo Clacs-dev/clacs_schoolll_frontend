@@ -12,6 +12,7 @@ import { TIPOS_SALA, disciplinaOptions } from '@/lib/academic'
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { useCargasDoHorario } from '@/lib/cargas'
+import { FichaDisciplina, numerarConteudos } from './FichaDisciplina'
 
 type Tab = 'niveis' | 'classes' | 'disciplinas' | 'programas' | 'salas' | 'tempos' | 'professores' | 'funcionarios'
 
@@ -188,7 +189,7 @@ const unidadeFields: FieldDef[] = [
   { name: 'tempo_lectivo_id', label: 'Tempo', type: 'select', hint: 'Tempos registados em «Tempos lectivos»',
     options: { path: '/tempos-lectivos', text: (r: Row) => `${r.designacao} (${r.duracao_minutos} min)` } },
   { name: 'objectivos', label: 'Objectivos', type: 'textarea', wide: true },
-  { name: 'conteudos', label: 'Conteúdos', type: 'textarea', wide: true },
+  { name: 'conteudos', label: 'Conteúdos', type: 'textarea', wide: true, hint: 'Um por linha (1.1, 1.2…); comece com «-» para um subponto (1.1.1)' },
 ]
 
 function Programas() {
@@ -218,7 +219,11 @@ function Programas() {
         <Select label="Disciplina" value={disciplina} onChange={setDisciplina} placeholder={classe ? 'Escolha a disciplina' : 'Escolha primeiro a classe'}
           options={classe ? discs.map((d) => ({ value: d.id, label: String(pick(d, 'nome', 'designacao')) })) : []} />
       </div>
-      {!(classe && disciplina) ? <Empty>Escolha a classe e a disciplina para ver e criar o programa.</Empty> : (
+      {!(classe && disciplina) ? <Empty>Escolha a classe e a disciplina para ver e criar o programa.</Empty> : (<>
+        <FichaDisciplina classe={classe} disciplina={disciplina}
+          nomeClasse={String(pick(classes.rows.find((c) => String(c.id) === classe), 'designacao', 'nome') ?? '')}
+          nomeDisciplina={String(pick(discs.find((d) => String(d.id) === disciplina), 'nome', 'designacao') ?? '')} />
+        <h4 className="ficha-tit" style={{ margin: '20px 0 8px' }}>PROGRAMA</h4>
         <Resource
           path="/programas"
           params={params}
@@ -235,9 +240,12 @@ function Programas() {
           hint={<>{q.rows.length} unidade(s){carga ? ` · carga horária (do horário): ${carga} por semana` : ''}. Em «⋯ → Visualizar» vê os objectivos e conteúdos.</>}
           empty="Esta disciplina ainda não tem programa nesta classe."
           expand={(r) => (
-            <div style={{ display: 'grid', gap: 8, whiteSpace: 'pre-wrap' }}>
-              <div><b>Objectivos</b><br />{r.objectivos || '—'}</div>
-              <div><b>Conteúdos</b><br />{r.conteudos || '—'}</div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {r.objectivos ? <div style={{ whiteSpace: 'pre-wrap' }}><b>Objectivos</b><br />{r.objectivos}</div> : null}
+              <div className="ficha-programa">
+                {numerarConteudos(r.conteudos, Number(r.ordem) || 1).map((l) => (
+                  <div key={l.numero} className={`n${l.nivel}`}>{l.numero} {l.texto}</div>))}
+              </div>
             </div>
           )}
           cols={[
@@ -247,7 +255,7 @@ function Programas() {
             { h: 'Tempo', render: (r) => nomeTempo(r.tempo_lectivo_id) },
           ]}
         />
-      )}
+      </>)}
     </>
   )
 }
