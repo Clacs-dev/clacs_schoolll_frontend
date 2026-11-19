@@ -710,3 +710,9 @@ table.plano-semanas tr.actual td:first-child { box-shadow: inset 3px 0 0 var(--a
 .mp-aula b { font-size: 14px; font-weight: 800; }
 .mp-aula span { font-size: 12px; font-weight: 700; }
 .mp-aula em { font-size: 11.5px; font-style: normal; color: var(--mu); }
+
+/* ---------- Registo da aula ---------- */
+.aula-form { display: grid; grid-template-columns: 1fr 180px; gap: 12px; }
+.aula-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--mu); }
+.aula-form textarea, .aula-form input { font: inherit; color: var(--tx); }
+@media (max-width: 640px) { .aula-form { grid-template-columns: 1fr; } }

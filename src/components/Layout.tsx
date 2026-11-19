@@ -45,7 +45,7 @@ export const NAV: Grupo[] = [
     ['/academico', 'Registo académico', 'academico'], ['/plano-actividades', 'Plano de actividade', 'pedagogico'],
     ['/turmas', 'Turmas', 'cadastro'], ['/horarios', 'Horários', 'pedagogico'], ['/cargas-horarias', 'Cargas horárias', 'academico'],
     ['/avaliacoes', 'Avaliações e notas', 'pedagogico'],
-    ['/pautas', 'Pautas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'], ['/assiduidade-professores', 'Assiduidade dos professores', 'academico'],
+    ['/pautas', 'Pautas', 'pedagogico'], ['/aulas', 'Aulas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'], ['/assiduidade-professores', 'Assiduidade dos professores', 'academico'],
     ['/registo-diario', 'Registo diário', 'pedagogico'],
   ] },
   { group: 'Secretaria', icon: 'secretaria', items: [

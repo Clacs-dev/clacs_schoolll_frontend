@@ -90,6 +90,7 @@ const staff: RouteObject[] = [
   at('turmas', () => import('@/pages/Ciclo')),
   at('horarios', () => import('@/pages/Ciclo')),
   at('cargas-horarias', () => import('@/pages/Ciclo')),
+  at('aulas', () => import('@/pages/Aulas')),
   at('assiduidade-professores', () => import('@/pages/AssiduidadeProfessores')),
   at('cobrancas', () => import('@/pages/Cobrancas')),
   at('pagamentos', () => import('@/pages/Pagamentos')),
