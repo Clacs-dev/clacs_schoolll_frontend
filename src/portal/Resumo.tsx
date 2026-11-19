@@ -6,7 +6,10 @@ import { Kz, dataPT } from '@/lib/format'
 import { useGet, useList } from '@/lib/hooks'
 
 const TIPOS: Record<string, string> = {
-  evento: 'Actividade', reuniao: 'Reunião', prova: 'Prova / exame', feriado: 'Feriado', interrupcao: 'Interrupção lectiva',
+  matricula: 'Matrículas e inscrições', abertura: 'Abertura do ano lectivo', aulas: 'Aulas', prova: 'Provas',
+  exame: 'Exames', recurso: 'Exames de recurso', entrega: 'Entrega de boletins e certificados', reuniao: 'Reunião',
+  evento: 'Actividade', pausa: 'Pausa (sem aulas)', ferias: 'Férias (sem aulas)', feriado: 'Feriado',
+  interrupcao: 'Interrupção lectiva',
 }
 
 /** Actividades que a escola marcou como visíveis às famílias (Plano de actividade), de hoje em diante. */

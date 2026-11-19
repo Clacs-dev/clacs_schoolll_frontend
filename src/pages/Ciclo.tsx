@@ -25,45 +25,12 @@ const turmaNovaFields: FieldDef[] = [
   ...comuns.filter((f) => f.name !== 'designacao'),
 ]
 import { Periodos, Resultados, Transitar } from './Academico'
+import { Plano } from './PlanoActividades'
 
 const hoje = () => new Date().toISOString().slice(0, 10)
 const hora = (v: unknown) => String(v ?? '').slice(0, 5)
 
-/* ------------ Plano de actividade ------------ */
-const TIPOS_ACTIVIDADE = [
-  { value: 'evento', label: 'Actividade / evento' }, { value: 'reuniao', label: 'Reunião' }, { value: 'prova', label: 'Prova / exame' },
-  { value: 'feriado', label: 'Feriado' }, { value: 'interrupcao', label: 'Interrupção lectiva' },
-]
-const actividadeFields: FieldDef[] = [
-  { name: 'titulo', label: 'Actividade', required: true, wide: true, placeholder: 'Ex.: Reunião de pais do 1.º trimestre' },
-  { name: 'tipo', label: 'Tipo', type: 'select', options: TIPOS_ACTIVIDADE, default: 'evento', required: true },
-  { name: 'data_inicio', label: 'Início', type: 'date', required: true },
-  { name: 'data_fim', label: 'Fim', type: 'date', hint: 'Em branco: um só dia' },
-  { name: 'descricao', label: 'Descrição', type: 'textarea', wide: true },
-  { name: 'publico', label: 'Portal das famílias', type: 'checkbox', hint: 'Mostrar às famílias', default: true },
-]
-
-function Plano({ c }: { c: Row }) {
-  return (
-    <Resource
-      path="/eventos"
-      params={{ desde: pick(c, 'data_inicio'), ate: pick(c, 'data_fim') }}
-      invalidate={['/eventos']}
-      createLabel="Nova actividade"
-      createFields={actividadeFields}
-      createInitial={{ data_inicio: pick(c, 'data_inicio') }}
-      crud="/eventos"
-      search
-      empty="O plano de actividades deste ciclo ainda está vazio."
-      cols={[
-        { h: 'Data', render: (r) => (r.data_fim && r.data_fim !== r.data_inicio ? `${dataPT(r.data_inicio)} a ${dataPT(r.data_fim)}` : dataPT(r.data_inicio)) },
-        { h: 'Actividade', k: 'titulo' },
-        { h: 'Tipo', render: (r) => TIPOS_ACTIVIDADE.find((t) => t.value === r.tipo)?.label ?? label(r.tipo) },
-        { h: 'Famílias', render: (r) => (r.publico === false ? <Tag>Interna</Tag> : <Tag tone="ok">Visível</Tag>) },
-      ]}
-    />
-  )
-}
+/* ------------ Plano de actividade: ver PlanoActividades.tsx ------------ */
 
 /* ------------ Turmas ------------ */
 function Turmas({ c }: { c: Row }) {
@@ -340,7 +307,7 @@ export function AccoesCiclo({ c, ciclos }: { c: Row; ciclos: Row[] }) {
 
 /* ------------ Páginas do ciclo escolhido no topo ------------ */
 const PAGINAS: Record<string, { titulo: string; sub: string; C: (p: { c: Row }) => ReactNode }> = {
-  '/plano-actividades': { titulo: 'Plano de actividade', sub: 'Actividades, reuniões, provas, feriados e interrupções do ciclo.', C: Plano },
+  '/plano-actividades': { titulo: 'Plano de actividade', sub: 'Calendário do ano lectivo: matrículas, aulas, provas, exames, recurso, pausas e férias, semana a semana.', C: Plano },
   '/turmas': { titulo: 'Turmas', sub: 'Turmas do ciclo, ocupação e professores por disciplina.', C: Turmas },
   '/horarios': { titulo: 'Horários', sub: 'Mapa de horário de cada turma do ciclo.', C: Horarios },
   '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Tempos e horas semanais de cada disciplina, por turma, calculados do horário.', C: Cargas },
