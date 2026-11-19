@@ -4,7 +4,7 @@ import { FormDialog, type FieldDef } from '@/components/FormDialog'
 import { Modal, ResultDialog, useConfirm } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
 import { Table } from '@/components/Table'
-import { Btn, Card, Empty, Loading, PageHead, Select, Tag } from '@/components/ui'
+import { Btn, Card, Empty, Loading, PageHead, Select, Tabs, Tag } from '@/components/ui'
 import { api, errMsg } from '@/lib/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/Toast'
@@ -26,6 +26,7 @@ const turmaNovaFields: FieldDef[] = [
 ]
 import { Periodos, Resultados, Transitar } from './Academico'
 import { Plano } from './PlanoActividades'
+import { CargasPorProfessor } from './CargasProfessor'
 
 const hoje = () => new Date().toISOString().slice(0, 10)
 const hora = (v: unknown) => String(v ?? '').slice(0, 5)
@@ -259,6 +260,16 @@ function CargasTurma({ turma, cargas, nomes }: { turma: Row; cargas?: Map<unknow
 }
 
 function Cargas({ c }: { c: Row }) {
+  const [vista, setVista] = useState<'professor' | 'turma'>('professor')
+  return (
+    <>
+      <Tabs<'professor' | 'turma'> tabs={[['professor', 'Por professor'], ['turma', 'Por turma']]} value={vista} onChange={setVista} />
+      {vista === 'professor' ? <CargasPorProfessor c={c} /> : <CargasPorTurma c={c} />}
+    </>
+  )
+}
+
+function CargasPorTurma({ c }: { c: Row }) {
   const { turmas, porTurma, nomeDisciplina, isLoading } = useCargasDoHorario()
   if (isLoading) return <Loading />
   return (
@@ -310,7 +321,7 @@ const PAGINAS: Record<string, { titulo: string; sub: string; C: (p: { c: Row }) 
   '/plano-actividades': { titulo: 'Plano de actividade', sub: 'Calendário do ano lectivo: matrículas, aulas, provas, exames, recurso, pausas e férias, semana a semana.', C: Plano },
   '/turmas': { titulo: 'Turmas', sub: 'Turmas do ciclo, ocupação e professores por disciplina.', C: Turmas },
   '/horarios': { titulo: 'Horários', sub: 'Mapa de horário de cada turma do ciclo.', C: Horarios },
-  '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Tempos e horas semanais de cada disciplina, por turma, calculados do horário.', C: Cargas },
+  '/cargas-horarias': { titulo: 'Cargas horárias', sub: 'Carga horária semanal de cada professor (e de cada turma), calculada do horário.', C: Cargas },
 }
 
 export default function CicloPagina() {
