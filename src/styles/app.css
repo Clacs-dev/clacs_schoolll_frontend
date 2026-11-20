@@ -666,16 +666,11 @@ table.matriz tbody tr:hover { background: var(--sf2); }
 /* ---------- Plano de actividades (calendário do ano lectivo) ---------- */
 .plano-barra { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .plano-barra .tabs { flex: 1 1 340px; min-width: 0; margin-bottom: 0; overflow-y: hidden; }
-.plano-legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 12px 0 16px; font-size: 12.5px; color: var(--mu); }
-.plano-legenda span { display: inline-flex; align-items: center; gap: 6px; }
-.plano-legenda span::before { content: ''; width: 12px; height: 12px; border-radius: 3px; background: var(--cor); }
 .plano-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.plano-chip { display: block; max-width: 100%; text-align: left; border: 0; border-left: 3px solid var(--cor); border-radius: 4px;
-  background: color-mix(in srgb, var(--cor) 16%, transparent); color: var(--tx); font: inherit; font-size: 12px; line-height: 1.3;
+.plano-chip { display: block; max-width: 100%; text-align: left; border: 1px solid var(--ln); border-radius: 4px;
+  background: var(--sf); color: var(--tx); font: inherit; font-size: 12px; line-height: 1.3;
   padding: 2px 6px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plano-chip:hover { background: color-mix(in srgb, var(--cor) 28%, transparent); }
-.plano-tipo { display: inline-flex; align-items: center; gap: 6px; }
-.plano-tipo::before { content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--cor); flex: none; }
+.plano-chip:hover { background: var(--sf2); }
 table.plano-semanas { font-size: 13px; }
 table.plano-semanas th, table.plano-semanas td { padding: 7px 12px; border-top: 1px solid var(--ln); text-align: left; vertical-align: top; }
 table.plano-semanas th { color: var(--mu); font-weight: 600; font-size: 12px; }

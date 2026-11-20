@@ -9,33 +9,43 @@ import { pick, type Row } from '@/lib/data'
 import { dataPT } from '@/lib/format'
 import { useAct, useGet, useList } from '@/lib/hooks'
 
-/** Tipos de actividade pelas fases do ano lectivo (como no calendário do ano académico), com a cor da legenda.
+/** Tipos de actividade pelas fases do ano lectivo (como no calendário do ano académico).
  *  Pausa, férias, interrupção e feriado são dias sem aulas: não contam como dias lectivos nem têm aulas previstas. */
 export const TIPOS_ACTIVIDADE = [
-  { value: 'matricula', label: 'Matrículas e inscrições', cor: '#5b8def' },
-  { value: 'abertura', label: 'Abertura do ano lectivo', cor: '#f59e0b' },
-  { value: 'aulas', label: 'Aulas e avaliação contínua', cor: '#94a3b8' },
-  { value: 'prova', label: 'Provas (sem interromper as aulas)', cor: '#8b5cf6' },
-  { value: 'exame', label: 'Exames (época normal)', cor: '#ef4444' },
-  { value: 'recurso', label: 'Exames de recurso', cor: '#ec4899' },
-  { value: 'entrega', label: 'Entrega de boletins e certificados', cor: '#22c55e' },
-  { value: 'reuniao', label: 'Reunião', cor: '#0ea5e9' },
-  { value: 'evento', label: 'Actividade / evento', cor: '#14b8a6' },
-  { value: 'pausa', label: 'Pausa entre trimestres (sem aulas)', cor: '#0e7490' },
-  { value: 'ferias', label: 'Férias (sem aulas)', cor: '#64748b' },
-  { value: 'interrupcao', label: 'Interrupção lectiva (sem aulas)', cor: '#a16207' },
-  { value: 'feriado', label: 'Feriado (sem aulas)', cor: '#dc2626' },
+  { value: 'matricula', label: 'Matrículas e inscrições' },
+  { value: 'abertura', label: 'Abertura do ano lectivo' },
+  { value: 'aulas', label: 'Aulas e avaliação contínua' },
+  { value: 'prova', label: 'Provas (sem interromper as aulas)' },
+  { value: 'exame', label: 'Exames (época normal)' },
+  { value: 'recurso', label: 'Exames de recurso' },
+  { value: 'entrega', label: 'Entrega de boletins e certificados' },
+  { value: 'reuniao', label: 'Reunião' },
+  { value: 'evento', label: 'Actividade / evento' },
+  { value: 'pausa', label: 'Pausa entre trimestres (sem aulas)' },
+  { value: 'ferias', label: 'Férias (sem aulas)' },
+  { value: 'interrupcao', label: 'Interrupção lectiva (sem aulas)' },
+  { value: 'feriado', label: 'Feriado (sem aulas)' },
 ]
 const SEM_AULAS = new Set(['pausa', 'ferias', 'interrupcao', 'feriado'])
 const tipoDe = (t: unknown) => TIPOS_ACTIVIDADE.find((x) => x.value === t) ?? TIPOS_ACTIVIDADE[8]
 
+/** A quem se destina a actividade. */
+export const ABRANGENCIAS = [
+  { value: 'escola', label: 'Toda a escola' },
+  { value: 'primeiro_ciclo', label: '1.º ciclo' },
+  { value: 'segundo_ciclo', label: '2.º ciclo' },
+]
+const abrangenciaDe = (v: unknown) => (ABRANGENCIAS.find((x) => x.value === v) ?? ABRANGENCIAS[0]).label
+
 export const actividadeFields: FieldDef[] = [
   { name: 'titulo', label: 'Actividade', required: true, wide: true, placeholder: 'Ex.: Provas do professor do 1.º trimestre' },
+  { name: 'abrangencia', label: 'Para', type: 'select', options: ABRANGENCIAS, default: 'escola', required: true },
   { name: 'tipo', label: 'Tipo / fase', type: 'select', options: TIPOS_ACTIVIDADE, default: 'evento', required: true },
+  { name: 'data_inicio', label: 'Data', type: 'date', required: true },
+  { name: 'data_fim', label: 'Até', type: 'date', hint: 'Em branco: um só dia' },
+  { name: 'objectivo', label: 'Objectivo', type: 'textarea', required: true, wide: true, placeholder: 'Para que serve esta actividade' },
   { name: 'responsavel', label: 'Responsável', placeholder: 'Ex.: Direcção pedagógica' },
-  { name: 'data_inicio', label: 'Início', type: 'date', required: true },
-  { name: 'data_fim', label: 'Fim', type: 'date', hint: 'Em branco: um só dia' },
-  { name: 'descricao', label: 'Descrição', type: 'textarea', wide: true },
+  { name: 'descricao', label: 'Observações', type: 'textarea', wide: true },
   { name: 'publico', label: 'Portal das famílias', type: 'checkbox', hint: 'Mostrar às famílias', default: true },
 ]
 
@@ -43,18 +53,11 @@ const INVALIDAR = ['/eventos', '/anos-lectivos', '/portal']
 
 function Chip({ a, onClick }: { a: Row; onClick?: () => void }) {
   const t = tipoDe(a.tipo)
+  const para = a.abrangencia && a.abrangencia !== 'escola' ? ` (${abrangenciaDe(a.abrangencia)})` : ''
   return (
-    <button type="button" className="plano-chip" style={{ ['--cor' as string]: t.cor }} onClick={onClick} title={`${t.label} — clique para editar`}>
-      {String(a.titulo)}
+    <button type="button" className="plano-chip" onClick={onClick} title={`${t.label} · ${abrangenciaDe(a.abrangencia)} — clique para editar`}>
+      {String(a.titulo)}{para}
     </button>
-  )
-}
-
-function Legenda() {
-  return (
-    <div className="plano-legenda">
-      {TIPOS_ACTIVIDADE.map((t) => <span key={t.value} style={{ ['--cor' as string]: t.cor }}>{t.label}</span>)}
-    </div>
   )
 }
 
@@ -92,7 +95,7 @@ function Semanas({ cal, editar }: { cal: Row; editar: (a: Row) => void }) {
 const iso = (d: Date) => d.toLocaleDateString('sv-SE')
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-/** Calendário mensal com as cores da legenda (segunda a domingo). */
+/** Calendário mensal (segunda a domingo). */
 function Mes({ c, eventos, periodos, editar }: { c: Row; eventos: Row[]; periodos: Row[]; editar: (a: Row) => void }) {
   const meses = useMemo(() => {
     const lista: string[] = []
@@ -193,7 +196,6 @@ export function Plano({ c }: { c: Row }) {
           {vista !== 'lista' && <Btn onClick={() => setNova(true)}>Nova actividade</Btn>}
         </div>}
       </div>
-      {vista !== 'lista' && <Legenda />}
 
       {vista === 'lista' ? (
         <Resource
@@ -202,7 +204,7 @@ export function Plano({ c }: { c: Row }) {
           invalidate={INVALIDAR}
           createLabel="Nova actividade"
           createFields={encerrado ? undefined : actividadeFields}
-          createInitial={{ data_inicio: pick(c, 'data_inicio') }}
+          createInitial={{ data_inicio: pick(c, 'data_inicio'), abrangencia: 'escola' }}
           crud={encerrado ? undefined : '/eventos'}
           deleteName={(r) => String(r.titulo)}
           search
@@ -210,7 +212,9 @@ export function Plano({ c }: { c: Row }) {
           cols={[
             { h: 'Data', render: (r) => (r.data_fim && r.data_fim !== r.data_inicio ? `${dataPT(r.data_inicio)} a ${dataPT(r.data_fim)}` : dataPT(r.data_inicio)) },
             { h: 'Actividade', k: 'titulo' },
-            { h: 'Tipo / fase', render: (r) => <span className="plano-tipo" style={{ ['--cor' as string]: tipoDe(r.tipo).cor }}>{tipoDe(r.tipo).label}</span> },
+            { h: 'Para', render: (r) => abrangenciaDe(r.abrangencia) },
+            { h: 'Objectivo', render: (r) => String(r.objectivo ?? '—') },
+            { h: 'Tipo / fase', render: (r) => tipoDe(r.tipo).label },
             { h: 'Responsável', render: (r) => String(r.responsavel ?? '—') },
             { h: 'Famílias', render: (r) => (r.publico === false ? <Tag>Interna</Tag> : <Tag tone="ok">Visível</Tag>) },
           ]}
@@ -219,7 +223,7 @@ export function Plano({ c }: { c: Row }) {
         : vista === 'semanas' ? <Semanas cal={cal.data ?? {}} editar={editar} />
           : <Mes c={c} eventos={eventos.rows} periodos={periodos} editar={editar} />}
 
-      {nova && <FormDialog title="Nova actividade" fields={actividadeFields} initial={{ data_inicio: pick(c, 'data_inicio') }}
+      {nova && <FormDialog title="Nova actividade" fields={actividadeFields} initial={{ data_inicio: pick(c, 'data_inicio'), abrangencia: 'escola' }}
         submitLabel="Criar" onSubmit={(p) => criar.mutateAsync(p)} onClose={() => setNova(false)} />}
       {aEditar && <FormDialog title="Editar actividade" fields={actividadeFields} initial={aEditar}
         onSubmit={(p) => guardar.mutateAsync({ id: aEditar.id, p })} onClose={() => setAEditar(null)} />}
