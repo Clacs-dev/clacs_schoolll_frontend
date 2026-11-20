@@ -260,8 +260,50 @@ const classeFields: FieldDef[] = [
 ]
 const tempoFields: FieldDef[] = [
   { name: 'designacao', label: 'Nome', placeholder: 'Em branco: «1.º tempo», «2.º tempo»…' },
-  { name: 'duracao_minutos', label: 'Duração (minutos)', type: 'number', min: 5, max: 240, default: 45, required: true },
+  { name: 'hora_inicio', label: 'Início', type: 'time', required: true },
+  { name: 'hora_fim', label: 'Fim', type: 'time', required: true },
 ]
+/** Os tempos registam-se aos pares: 1.º e 2.º, 3.º e 4.º, 5.º e 6.º tempo… */
+const PARES = [1, 2, 3, 4, 5, 6].map((p) => ({ value: p, label: `${2 * p - 1}.º e ${2 * p}.º tempo` }))
+const parDe = (ordem: unknown) => PARES[Math.ceil(Number(ordem) / 2) - 1]?.label ?? '—'
+const hh = (v: unknown) => String(v ?? '').slice(0, 5)
+const parFields: FieldDef[] = [
+  { name: 'par', label: 'Tempos', type: 'select', options: PARES, required: true, wide: true },
+  { name: 'primeiro_inicio', label: 'Primeiro tempo — início', type: 'time', required: true },
+  { name: 'primeiro_fim', label: 'Primeiro tempo — fim', type: 'time', required: true },
+  { name: 'segundo_inicio', label: 'Segundo tempo — início', type: 'time', required: true },
+  { name: 'segundo_fim', label: 'Segundo tempo — fim', type: 'time', required: true },
+]
+
+/** Tempos lectivos: registam-se aos pares, com as horas de cada tempo. */
+function TemposLectivos({ rows }: { rows: Row[] }) {
+  const [aberto, setAberto] = useState(false)
+  const criar = useAct((p: Row) => api.post('/tempos-lectivos/par', { ...p, par: Number(p.par) }), {
+    invalidate: ['/tempos-lectivos'], ok: 'Tempos guardados.', onDone: () => setAberto(false),
+  })
+  const doTempo = (o: number) => rows.find((t) => Number(t.ordem) === o)
+  // Ao escolher um par já registado, mostram-se as horas que tem (para corrigir).
+  const preencher = (v: Row, campo: string) => {
+    if (campo !== 'par') return v
+    const p = Number(v.par), a = doTempo(2 * p - 1), b = doTempo(2 * p)
+    return { ...v, primeiro_inicio: hh(a?.hora_inicio), primeiro_fim: hh(a?.hora_fim), segundo_inicio: hh(b?.hora_inicio), segundo_fim: hh(b?.hora_fim) }
+  }
+  const proximo = PARES.find((p) => !doTempo(2 * p.value - 1)?.hora_inicio)?.value ?? 1
+  return (
+    <>
+      <Resource path="/tempos-lectivos" editFields={tempoFields} toolbar={<Btn onClick={() => setAberto(true)}>Novo par de tempos</Btn>}
+        editPath={(r) => `/tempos-lectivos/${r.id}`} deletePath={(r) => `/tempos-lectivos/${r.id}`}
+        hint="Os tempos registam-se aos pares (1.º e 2.º, 3.º e 4.º, 5.º e 6.º) com as horas de cada um. No horário escolhe-se o tempo e as horas vêm dele."
+        empty="Ainda não há tempos lectivos. Registe o 1.º e o 2.º tempo (ex.: 07:30–08:15 e 08:20–09:05)."
+        cols={[{ h: 'Tempos', render: (r) => parDe(r.ordem) }, { h: 'Ordem', render: celOrdem(repetidas(rows)) }, { h: 'Tempo', k: 'designacao' },
+          { h: 'Horas', render: (r) => (r.hora_inicio ? `${hh(r.hora_inicio)}–${hh(r.hora_fim)}` : <Tag tone="wa">Sem horas</Tag>) },
+          { h: 'Duração', render: (r) => `${r.duracao_minutos} min` }]} />
+      {aberto && <FormDialog title="Novo par de tempos" fields={parFields} initial={preencher({ par: proximo }, 'par')} derivar={preencher}
+        intro={<span className="mu">Se o par já existe, as horas são corrigidas.</span>}
+        onSubmit={(p) => criar.mutateAsync(p)} onClose={() => setAberto(false)} />}
+    </>
+  )
+}
 const disciplinaFields: FieldDef[] = [{ name: 'nome', label: 'Nome', required: true }, { name: 'sigla', label: 'Sigla' }]
 
 export default function Academico() {
@@ -313,12 +355,7 @@ export default function Academico() {
           cols={[{ h: 'Disciplina', k: ['nome', 'designacao'] }, { h: 'Sigla', k: 'sigla' }]} />
       )}
       {tab === 'tempos' && (
-        <Resource path="/tempos-lectivos" createLabel="Novo tempo lectivo" createFields={tempoFields} editFields={tempoFields}
-          editPath={(r) => `/tempos-lectivos/${r.id}`} deletePath={(r) => `/tempos-lectivos/${r.id}`}
-          hint="Os tempos do dia e a duração de cada um. No horário escolhe-se o tempo e a hora de fim é calculada (início + duração)."
-          empty="Ainda não há tempos lectivos. Crie o 1.º tempo (por omissão, 45 minutos)."
-          cols={[{ h: 'Ordem', render: celOrdem(repetidas(temposQ.rows)) }, { h: 'Tempo', k: 'designacao' },
-            { h: 'Duração', render: (r) => `${r.duracao_minutos} min` }]} />
+        <TemposLectivos rows={temposQ.rows} />
       )}
       {tab === 'salas' && (
         <Resource path="/salas" search createLabel="Nova sala" createFields={salaFields}

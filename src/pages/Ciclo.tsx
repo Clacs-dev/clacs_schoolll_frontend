@@ -77,7 +77,8 @@ const DIAS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((
  *  a disciplina por extenso, a sala quando não é a da turma e o nome completo do professor. */
 function MapaHorario({ rows, turma, salaTurma, onAula }: { rows: Row[]; turma: string; salaTurma: unknown; onAula: (r: Row) => void }) {
   const dias = DIAS.filter((d) => d.value <= 5 || rows.some((r) => r.dia_semana === d.value))
-  const faixas = [...new Map(rows.map((r) => [`${hora(r.hora_inicio)}–${hora(r.hora_fim)}`, r])).keys()].sort()
+  const porFaixa = new Map(rows.map((r) => [`${hora(r.hora_inicio)}–${hora(r.hora_fim)}`, r]))
+  const faixas = [...porFaixa.keys()].sort()
   const celula = (faixa: string, dia: number) => rows.filter((r) => r.dia_semana === dia && `${hora(r.hora_inicio)}–${hora(r.hora_fim)}` === faixa)
 
   return (
@@ -90,7 +91,7 @@ function MapaHorario({ rows, turma, salaTurma, onAula }: { rows: Row[]; turma: s
         <tbody>
           {faixas.map((f) => (
             <tr key={f}>
-              <th scope="row">{f}</th>
+              <th scope="row" title={f}>{f.slice(0, 5)}<br /><span className="mu">{String(porFaixa.get(f)?.tempo ?? '')}.º tempo</span></th>
               {dias.map((d) => (
                 <td key={d.value}>
                   {celula(f, d.value).map((r) => (
@@ -156,12 +157,17 @@ function Horarios({ c }: { c: Row }) {
   const terminar = useAct((id: number) => api.post(`/horarios/${id}/terminar`), { invalidate: ['/horarios'], ok: 'Tempo lectivo retirado do horário.' })
   const futuro = data > hoje()
 
-  // Tempo escolhido na lista (registada em Registo académico → Tempos lectivos): o fim é início + duração.
-  const duracao = (tempo: unknown) => tempos.rows.find((x) => String(x.ordem) === String(tempo))?.duracao_minutos
+  // Tempo escolhido na lista (Registo académico → Tempos lectivos): as horas vêm do tempo (ex.: 1.º tempo 07:30–08:15).
+  // Se o início for outro, o fim é o início mais a duração do tempo.
+  const doTempo = (tempo: unknown) => tempos.rows.find((x) => String(x.ordem) === String(tempo))
   const derivar = (v: Row, campo: string) => {
     if (campo !== 'tempo' && campo !== 'hora_inicio') return v
-    const d = duracao(v.tempo)
-    return d && v.hora_inicio ? { ...v, hora_fim: somarMinutos(String(v.hora_inicio), Number(d)) } : { ...v, hora_fim: '' }
+    const t = doTempo(v.tempo)
+    if (!t) return { ...v, hora_fim: '' }
+    if (campo === 'tempo' && t.hora_inicio) return { ...v, hora_inicio: hora(t.hora_inicio), hora_fim: hora(t.hora_fim) }
+    if (!v.hora_inicio) return { ...v, hora_fim: '' }
+    if (t.hora_fim && String(v.hora_inicio) === hora(t.hora_inicio)) return { ...v, hora_fim: hora(t.hora_fim) }
+    return { ...v, hora_fim: somarMinutos(String(v.hora_inicio), Number(t.duracao_minutos)) }
   }
   const campos: FieldDef[] = [
     { name: 'disciplina_id', label: 'Disciplina', type: 'select', required: true, hint: 'Disciplinas do plano curricular da classe',
@@ -169,9 +175,10 @@ function Horarios({ c }: { c: Row }) {
     { name: 'funcionario_id', label: 'Professor', type: 'select', options: { ...funcionarioOptions, params: { cargo: 'professor' } } },
     { name: 'dia_semana', label: 'Dia', type: 'select', options: DIAS, required: true },
     { name: 'tempo', label: 'Tempo', type: 'select', required: true,
-      options: tempos.rows.map((x) => ({ value: x.ordem, label: `${x.designacao} (${x.duracao_minutos} min)` })) },
-    { name: 'hora_inicio', label: 'Início', type: 'time', required: true },
-    { name: 'hora_fim', label: 'Fim', type: 'time', readOnly: true, hint: 'Calculado: início + duração do tempo' },
+      options: tempos.rows.map((x) => ({ value: x.ordem,
+        label: x.hora_inicio ? `${x.designacao} (${hora(x.hora_inicio)}–${hora(x.hora_fim)})` : `${x.designacao} (${x.duracao_minutos} min)` })) },
+    { name: 'hora_inicio', label: 'Início', type: 'time', required: true, hint: 'Vem do tempo escolhido' },
+    { name: 'hora_fim', label: 'Fim', type: 'time', readOnly: true, hint: 'Vem do tempo escolhido' },
   ]
   // No novo tempo lectivo escolhem-se vários dias; a sala é a da turma.
   const camposNovo: FieldDef[] = [
@@ -195,7 +202,7 @@ function Horarios({ c }: { c: Row }) {
       </div>
       {semTempos && (
         <p className="note" style={{ margin: '0 0 12px' }}>
-          Para criar o horário, registe primeiro os tempos lectivos (ex.: 1.º tempo, 45 min) em{' '}
+          Para criar o horário, registe primeiro os tempos lectivos (ex.: 1.º e 2.º tempo, 07:30–08:15 e 08:20–09:05) em{' '}
           <Link to="/academico?tab=tempos">Registo académico → Tempos lectivos</Link>.
         </p>
       )}
