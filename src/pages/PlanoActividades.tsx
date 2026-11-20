@@ -29,17 +29,18 @@ export const TIPOS_ACTIVIDADE = [
 const SEM_AULAS = new Set(['pausa', 'ferias', 'interrupcao', 'feriado'])
 const tipoDe = (t: unknown) => TIPOS_ACTIVIDADE.find((x) => x.value === t) ?? TIPOS_ACTIVIDADE[8]
 
-/** A quem se destina a actividade. */
-export const ABRANGENCIAS = [
-  { value: 'escola', label: 'Toda a escola' },
-  { value: 'primeiro_ciclo', label: '1.º ciclo' },
-  { value: 'segundo_ciclo', label: '2.º ciclo' },
-]
-const abrangenciaDe = (v: unknown) => (ABRANGENCIAS.find((x) => x.value === v) ?? ABRANGENCIAS[0]).label
+/** A quem se destina a actividade: um nível de ensino registado (Registo académico → Níveis) ou toda a escola (0). */
+const TODA_ESCOLA = 0
+type Niveis = Row[]
+const nivelDe = (niveis: Niveis, id: unknown) =>
+  (id ? String(pick(niveis.find((n) => String(n.id) === String(id)), 'nome') ?? '—') : 'Toda a escola')
+const opcoesNivel = (niveis: Niveis) => [{ value: TODA_ESCOLA, label: 'Toda a escola' },
+  ...niveis.map((n) => ({ value: n.id, label: String(pick(n, 'nome')) }))]
 
-export const actividadeFields: FieldDef[] = [
+export const actividadeFields = (niveis: Niveis): FieldDef[] => [
   { name: 'titulo', label: 'Actividade', required: true, wide: true, placeholder: 'Ex.: Provas do professor do 1.º trimestre' },
-  { name: 'abrangencia', label: 'Para', type: 'select', options: ABRANGENCIAS, default: 'escola', required: true },
+  { name: 'nivel_id', label: 'Para', type: 'select', options: opcoesNivel(niveis), required: true,
+    hint: 'Níveis registados em Registo académico → Níveis de ensino' },
   { name: 'tipo', label: 'Tipo / fase', type: 'select', options: TIPOS_ACTIVIDADE, default: 'evento', required: true },
   { name: 'data_inicio', label: 'Data', type: 'date', required: true },
   { name: 'data_fim', label: 'Até', type: 'date', hint: 'Em branco: um só dia' },
@@ -51,18 +52,18 @@ export const actividadeFields: FieldDef[] = [
 
 const INVALIDAR = ['/eventos', '/anos-lectivos', '/portal']
 
-function Chip({ a, onClick }: { a: Row; onClick?: () => void }) {
+function Chip({ a, niveis, onClick }: { a: Row; niveis: Niveis; onClick?: () => void }) {
   const t = tipoDe(a.tipo)
-  const para = a.abrangencia && a.abrangencia !== 'escola' ? ` (${abrangenciaDe(a.abrangencia)})` : ''
+  const para = a.nivel_id ? ` (${nivelDe(niveis, a.nivel_id)})` : ''
   return (
-    <button type="button" className="plano-chip" onClick={onClick} title={`${t.label} · ${abrangenciaDe(a.abrangencia)} — clique para editar`}>
+    <button type="button" className="plano-chip" onClick={onClick} title={`${t.label} · ${nivelDe(niveis, a.nivel_id)} — clique para editar`}>
       {String(a.titulo)}{para}
     </button>
   )
 }
 
 /** Calendário semanal: fase, n.º da semana lectiva, datas, dias com aulas e actividades (como no calendário do ano académico). */
-function Semanas({ cal, editar }: { cal: Row; editar: (a: Row) => void }) {
+function Semanas({ cal, niveis, editar }: { cal: Row; niveis: Niveis; editar: (a: Row) => void }) {
   const semanas = (cal.semanas as Row[]) ?? []
   const hoje = new Date().toLocaleDateString('sv-SE')
   return (
@@ -81,7 +82,7 @@ function Semanas({ cal, editar }: { cal: Row; editar: (a: Row) => void }) {
                   <td>{dataPT(s.inicio)}</td>
                   <td>{dataPT(s.fim)}</td>
                   <td className="c">{s.lectiva ? String(s.dias_lectivos) : <Tag>Sem aulas</Tag>}</td>
-                  <td><div className="plano-chips">{((s.actividades as Row[]) ?? []).map((a) => <Chip key={String(a.id)} a={a} onClick={() => editar(a)} />)}</div></td>
+                  <td><div className="plano-chips">{((s.actividades as Row[]) ?? []).map((a) => <Chip key={String(a.id)} a={a} niveis={niveis} onClick={() => editar(a)} />)}</div></td>
                 </tr>
               </Fragment>
             )
@@ -96,7 +97,7 @@ const iso = (d: Date) => d.toLocaleDateString('sv-SE')
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 /** Calendário mensal (segunda a domingo). */
-function Mes({ c, eventos, periodos, editar }: { c: Row; eventos: Row[]; periodos: Row[]; editar: (a: Row) => void }) {
+function Mes({ c, eventos, periodos, niveis, editar }: { c: Row; eventos: Row[]; periodos: Row[]; niveis: Niveis; editar: (a: Row) => void }) {
   const meses = useMemo(() => {
     const lista: string[] = []
     const d = new Date(`${String(pick(c, 'data_inicio')).slice(0, 7)}-01T12:00:00`)
@@ -131,7 +132,7 @@ function Mes({ c, eventos, periodos, editar }: { c: Row; eventos: Row[]; periodo
           return (
             <div key={k} className={cls.filter(Boolean).join(' ')}>
               <span className="plano-num">{d.getDate()}</span>
-              {evs.map((e) => <Chip key={String(e.id)} a={e} onClick={() => editar(e)} />)}
+              {evs.map((e) => <Chip key={String(e.id)} a={e} niveis={niveis} onClick={() => editar(e)} />)}
             </div>
           )
         })}
@@ -179,6 +180,9 @@ export function Plano({ c }: { c: Row }) {
   })
   const editar = (a: Row) => { if (!encerrado) setAEditar(eventos.rows.find((e) => e.id === a.id) ?? a) }
   const periodos = (cal.data?.periodos as Row[]) ?? []
+  const niveis = useList('/niveis').rows
+  const campos = actividadeFields(niveis)
+  const inicial = { data_inicio: pick(c, 'data_inicio'), nivel_id: TODA_ESCOLA }
 
   return (
     <>
@@ -203,8 +207,8 @@ export function Plano({ c }: { c: Row }) {
           params={{ desde: pick(c, 'data_inicio'), ate: pick(c, 'data_fim') }}
           invalidate={INVALIDAR}
           createLabel="Nova actividade"
-          createFields={encerrado ? undefined : actividadeFields}
-          createInitial={{ data_inicio: pick(c, 'data_inicio'), abrangencia: 'escola' }}
+          createFields={encerrado ? undefined : campos}
+          createInitial={inicial}
           crud={encerrado ? undefined : '/eventos'}
           deleteName={(r) => String(r.titulo)}
           search
@@ -212,7 +216,7 @@ export function Plano({ c }: { c: Row }) {
           cols={[
             { h: 'Data', render: (r) => (r.data_fim && r.data_fim !== r.data_inicio ? `${dataPT(r.data_inicio)} a ${dataPT(r.data_fim)}` : dataPT(r.data_inicio)) },
             { h: 'Actividade', k: 'titulo' },
-            { h: 'Para', render: (r) => abrangenciaDe(r.abrangencia) },
+            { h: 'Para', render: (r) => nivelDe(niveis, r.nivel_id) },
             { h: 'Objectivo', render: (r) => String(r.objectivo ?? '—') },
             { h: 'Tipo / fase', render: (r) => tipoDe(r.tipo).label },
             { h: 'Responsável', render: (r) => String(r.responsavel ?? '—') },
@@ -220,12 +224,12 @@ export function Plano({ c }: { c: Row }) {
           ]}
         />
       ) : cal.isLoading ? <Loading /> : cal.error ? <ErrorBox error={cal.error} retry={() => cal.refetch()} />
-        : vista === 'semanas' ? <Semanas cal={cal.data ?? {}} editar={editar} />
-          : <Mes c={c} eventos={eventos.rows} periodos={periodos} editar={editar} />}
+        : vista === 'semanas' ? <Semanas cal={cal.data ?? {}} niveis={niveis} editar={editar} />
+          : <Mes c={c} eventos={eventos.rows} periodos={periodos} niveis={niveis} editar={editar} />}
 
-      {nova && <FormDialog title="Nova actividade" fields={actividadeFields} initial={{ data_inicio: pick(c, 'data_inicio'), abrangencia: 'escola' }}
+      {nova && <FormDialog title="Nova actividade" fields={campos} initial={inicial}
         submitLabel="Criar" onSubmit={(p) => criar.mutateAsync(p)} onClose={() => setNova(false)} />}
-      {aEditar && <FormDialog title="Editar actividade" fields={actividadeFields} initial={aEditar}
+      {aEditar && <FormDialog title="Editar actividade" fields={campos} initial={{ ...aEditar, nivel_id: aEditar.nivel_id ?? TODA_ESCOLA }}
         onSubmit={(p) => guardar.mutateAsync({ id: aEditar.id, p })} onClose={() => setAEditar(null)} />}
       {copiar && <CopiarPlano c={c} onClose={() => setCopiar(false)} />}
     </>
