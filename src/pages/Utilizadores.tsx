@@ -1,5 +1,5 @@
 import { Resource } from '@/components/Resource'
-import { Estado, PageHead } from '@/components/ui'
+import { Estado, PageHead, Tag } from '@/components/ui'
 import { funcionarioOptions } from '@/lib/academic'
 import { asList, perfisOf, pick } from '@/lib/data'
 import { label } from '@/lib/format'
@@ -24,13 +24,16 @@ export default function Utilizadores() {
           { name: 'email', label: 'E-mail (início de sessão)', type: 'email', required: true },
           { name: 'telefone', label: 'Telefone', type: 'tel' },
           { name: 'senha', label: 'Palavra-passe inicial', type: 'password', required: true, hint: 'Mínimo de 8 caracteres' },
-          { name: 'funcionario_id', label: 'Funcionário associado', type: 'select', options: funcionarioOptions },
+          { name: 'funcionario_id', label: 'Funcionário associado', type: 'select', options: funcionarioOptions,
+            hint: 'Obrigatório no perfil professor: é por aqui que ele vê as suas turmas e aulas' },
           { name: 'perfis', label: 'Perfis', type: 'multi', options: options, default: ['secretaria'] },
         ]}
         editFields={[
           { name: 'nome', label: 'Nome', wide: true },
           { name: 'telefone', label: 'Telefone', type: 'tel' },
           { name: 'senha', label: 'Nova palavra-passe', type: 'password', hint: 'Deixe em branco para não alterar' },
+          { name: 'funcionario_id', label: 'Funcionário associado', type: 'select', options: funcionarioOptions,
+            hint: 'Obrigatório no perfil professor' },
           { name: 'perfis', label: 'Perfis', type: 'multi', options: options },
           { name: 'activo', label: 'Estado', type: 'checkbox', hint: 'Conta activa', default: true },
         ]}
@@ -38,6 +41,8 @@ export default function Utilizadores() {
         cols={[
           { h: 'Nome', k: ['nome', 'nome_completo'] }, { h: 'E-mail', k: 'email' }, { h: 'Telefone', k: 'telefone' },
           { h: 'Perfis', render: (r) => perfisOf(r).map(label).join(', ') || '—' },
+          { h: 'Funcionário', render: (r) => (pick(r, 'funcionario') as string)
+            || (perfisOf(r).includes('professor') ? <Tag tone="wa">Sem ligação</Tag> : '—') },
           { h: '2FA', render: (r) => (pick(r, 'doisfa_activo', 'dois_fa', 'totp_activo', 'tem_2fa') ? 'Activo' : '—') },
           { h: 'Estado', render: (r) => <Estado v={pick(r, 'activo') === false ? 'inactivo' : 'activo'} /> },
         ]}

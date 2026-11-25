@@ -15,6 +15,7 @@ import { dataDoCiclo, horasTexto, useCargasDoHorario, type Carga } from '@/lib/c
 import { dataPT, label } from '@/lib/format'
 import { useAct, useList } from '@/lib/hooks'
 import { Atribuicoes, comuns } from './Turmas'
+import { usePermite } from '@/components/Layout'
 
 /** Nome da turma montado pela classe e pela letra, sempre no mesmo formato: «5.ª Classe» + «B» → «5.ª B». */
 const LETRAS = 'ABCDEFGHIJKL'.split('').map((l) => ({ value: l, label: l }))
@@ -37,6 +38,9 @@ const hora = (v: unknown) => String(v ?? '').slice(0, 5)
 function Turmas({ c }: { c: Row }) {
   const [at, setAt] = useState<Row | null>(null)
   const classes = useList('/classes')
+  // Quem só consulta (ex.: o professor, que vê as suas turmas) não vê botões que a API recusaria.
+  const permite = usePermite()
+  const podeCriar = permite('academico:criar'), podeEditar = permite('academico:editar'), podeApagar = permite('academico:apagar')
   return (
     <>
       <Resource
@@ -45,15 +49,15 @@ function Turmas({ c }: { c: Row }) {
         invalidate={['/turmas']}
         search
         createLabel="Nova turma"
-        createFields={turmaNovaFields}
+        createFields={podeCriar ? turmaNovaFields : undefined}
         beforeCreate={(p) => {
           const { letra, ...resto } = p
           const classe = classes.rows.find((k) => k.id === p.classe_id)
           return { ...resto, ano_id: c.id, designacao: `${prefixoDaClasse(pick(classe, 'designacao'))} ${letra}`.trim() }
         }}
-        editFields={comuns}
-        editPath={(r) => `/turmas/${r.id}`}
-        deletePath={(r) => `/turmas/${r.id}`}
+        editFields={podeEditar ? comuns : undefined}
+        editPath={podeEditar ? (r) => `/turmas/${r.id}` : undefined}
+        deletePath={podeApagar ? (r) => `/turmas/${r.id}` : undefined}
         empty="Este ciclo ainda não tem turmas."
         cols={[
           { h: 'Turma', k: ['designacao', 'nome'] },
@@ -64,7 +68,7 @@ function Turmas({ c }: { c: Row }) {
         ]}
         rowActions={(r) => <Btn variant="link" onClick={() => setAt(r)}>Disciplinas</Btn>}
       />
-      {at && <Atribuicoes t={at} onClose={() => setAt(null)} />}
+      {at && <Atribuicoes t={at} onClose={() => setAt(null)} podeAtribuir={podeEditar} />}
     </>
   )
 }

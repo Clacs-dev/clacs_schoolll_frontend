@@ -23,7 +23,7 @@ export const createFields: FieldDef[] = [
   ...comuns.slice(1),
 ]
 
-export function Atribuicoes({ t, onClose }: { t: Row; onClose: () => void }) {
+export function Atribuicoes({ t, onClose, podeAtribuir = true }: { t: Row; onClose: () => void; podeAtribuir?: boolean }) {
   const q = useList(`/turmas/${t.id}/atribuicoes`)
   const plano = useList(`/classes/${t.classe_id}/disciplinas`)
   // Todas as disciplinas do plano curricular da classe, com o professor atribuído (ou por atribuir).
@@ -47,14 +47,14 @@ export function Atribuicoes({ t, onClose }: { t: Row; onClose: () => void }) {
           ]}
         />
       )}
-      <form
+      {podeAtribuir && <form
         style={{ marginTop: 16 }}
         onSubmit={(e) => { e.preventDefault(); atribuir.mutate(toPayload(fields, vals)) }}
       >
         <h4 style={{ margin: '0 0 8px' }}>Atribuir / substituir professor</h4>
         <FormFields fields={camposPlano} values={vals} set={(n, v) => setVals((s) => ({ ...s, [n]: v }))} />
         <div className="form-f"><Btn type="submit" busy={atribuir.isPending}>Atribuir</Btn></div>
-      </form>
+      </form>}
     </Modal>
   )
 }

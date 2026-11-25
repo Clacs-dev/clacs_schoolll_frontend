@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { useAuth } from '@/auth/AuthContext'
-import { usePode } from '@/components/Layout'
+import { usePode, useSoProfessor } from '@/components/Layout'
 import { Card, Empty, Loading } from '@/components/ui'
 import { useAnoActivo } from '@/lib/academic'
 import { nameOf, num, type Row } from '@/lib/data'
@@ -49,18 +49,27 @@ function AlunosPorTurma({ turmas }: { turmas: Row[] }) {
 export default function VisaoGeral() {
   const { user } = useAuth()
   const pode = usePode()
+  const soProfessor = useSoProfessor()
   const { ano, loading: anoLoading } = useAnoActivo()
   const alunos = useList(pode('cadastro') ? '/alunos' : null, { limit: 2000 })
   const turmas = useList('/turmas')
-  const matriculas = useList(pode('cadastro') && ano ? '/matriculas' : null) // sem ano lectivo a API responde 409
+  const secretaria = pode('cadastro') && !soProfessor   // o professor lê alunos das suas turmas, mas não gere a secretaria
+  const matriculas = useList(secretaria && ano ? '/matriculas' : null) // sem ano lectivo a API responde 409
   const auditoria = useList(pode('utilizadores') ? '/auditoria' : null, { limit: 8 })
-  const pedidos = useList(pode('cadastro') ? '/pedidos' : null, { estado: 'pendente' })
+  const pedidos = useList(secretaria ? '/pedidos' : null, { estado: 'pendente' })
 
   const activos = alunos.rows.filter((a) => a.estado === 'activo').length
   const nee = alunos.rows.filter((a) => a.necessidade_especial).length
   const recentes = [...matriculas.rows].sort((a, b) => String(b.data_matricula).localeCompare(String(a.data_matricula)) || b.id - a.id).slice(0, 6)
   const porEstado = ESTADOS.map(([k, l, c]) => [l, c, alunos.rows.filter((a) => a.estado === k).length] as const)
   const totalEstados = porEstado.reduce((s, [, , n]) => s + n, 0) || 1
+  // Um professor só vê as turmas onde lecciona ou de que é director: dizer-lhe porque não aparece nenhuma.
+  const semTurmas = () => {
+    const ciclo = ano?.designacao ? ` (${ano.designacao})` : ''
+    if (!soProfessor) return `Sem turmas neste ciclo${ciclo}.`
+    if (!user?.funcionario_id) return 'A sua conta ainda não está ligada ao seu nome de professor. Peça ao administrador para escolher o "Funcionário associado" em Utilizadores.'
+    return `Ainda não tem turmas neste ciclo${ciclo}. Aparecem quando a coordenação lhe atribuir disciplinas em Turmas → Disciplinas, ou o indicar como director de turma.`
+  }
   const lugares = turmas.rows.reduce((s, t) => s + num(t.capacidade), 0)
   const ocupados = turmas.rows.reduce((s, t) => s + num(t.alunos), 0)
 
@@ -82,17 +91,17 @@ export default function VisaoGeral() {
         <Card><div className="vg-kpi"><span>Alunos activos</span><b>{alunos.isLoading ? '…' : activos}</b>{nee > 0 && <small className="vg-nee">⚠ {nee} com necessidades especiais</small>}</div></Card>
         <Card><div className="vg-kpi"><span>Turmas</span><b>{turmas.rows.length}</b><small>{ocupados}/{lugares} lugares ocupados</small></div></Card>
         <Card><div className="vg-kpi"><span>Período lectivo</span><b>{ano?.designacao ?? '—'}</b><small>{ano ? `${dataPT(ano.data_inicio)} a ${dataPT(ano.data_fim)}` : ''}</small></div></Card>
-        {pode('cadastro') && (
+        {secretaria && (
           <Card><Link to="/pedidos?estado=pendente" className="vg-kpi vg-link"><span>Pedidos por decidir</span><b className={pedidos.rows.length ? 'vg-alerta' : ''}>{pedidos.rows.length}</b><small>dos encarregados, no portal</small></Link></Card>
         )}
       </div>
 
       <div className="vg-grid">
         <Card title="Alunos por turma">
-          {turmas.isLoading ? <Loading /> : turmas.rows.length ? <AlunosPorTurma turmas={turmas.rows} /> : <Empty>Sem turmas no ano lectivo activo.</Empty>}
+          {turmas.isLoading ? <Loading /> : turmas.rows.length ? <AlunosPorTurma turmas={turmas.rows} /> : <Empty>{semTurmas()}</Empty>}
         </Card>
 
-        {pode('cadastro') && (
+        {secretaria && (
           <Card title="Matriculados recentemente" pad={false}>
             {matriculas.isLoading ? <Loading /> : recentes.length ? (
               <ul className="vg-lista">
@@ -125,7 +134,7 @@ export default function VisaoGeral() {
           </Card>
         )}
 
-        {pode('cadastro') && (
+        {secretaria && (
           <Card title="Situação dos alunos">
             {alunos.isLoading ? <Loading /> : (
               <>

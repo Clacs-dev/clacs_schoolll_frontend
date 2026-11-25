@@ -31,27 +31,30 @@ export const Icone = ({ n, size = 18 }: { n: string; size?: number }) => (
 )
 
 /* ---------------------------------------------------------------- menu (cada entrada: caminho, nome, módulo de permissão) */
-type Item = [string, string, string?]
+// [caminho, nome, módulo da permissão, visibilidade]. Visibilidade "naoProfessor": escondido a quem só tem o perfil
+// professor (ele precisa de "cadastro: ver" para ler os alunos das suas turmas, mas não gere a secretaria);
+// "soProfessor": só para esse utilizador (o mesmo ecrã noutro grupo).
+type Item = [string, string, string?, ('naoProfessor' | 'soProfessor')?]
 type Grupo = { group: string; icon: string; items: Item[] }
 
 // Organizado pelos serviços da escola. Um mesmo ecrã com separadores (ex.: /academico) pode aparecer em
 // vários grupos, cada um a abrir o separador desse serviço (?tab=…).
 export const NAV: Grupo[] = [
   { group: 'Direcção', icon: 'painel', items: [
-    ['/gestao', 'Gestão geral'], ['/painel', 'Painel da direcção', 'painel'], ['/alertas', 'Alertas', 'painel'],
+    ['/gestao', 'Gestão geral', undefined, 'naoProfessor'], ['/painel', 'Painel da direcção', 'painel'], ['/alertas', 'Alertas', 'painel'],
     ['/relatorios', 'Relatórios', 'painel'], ['/assistente', 'Assistente', 'painel'],
   ] },
   { group: 'Pedagógico', icon: 'docente', items: [
     ['/academico', 'Registo académico', 'academico'], ['/plano-actividades', 'Plano de actividade', 'pedagogico'],
     ['/turmas', 'Turmas', 'cadastro'], ['/horarios', 'Horários', 'pedagogico'], ['/cargas-horarias', 'Cargas horárias', 'academico'],
     ['/avaliacoes', 'Avaliações e notas', 'pedagogico'],
-    ['/pautas', 'Pautas', 'pedagogico'], ['/aulas', 'Aulas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'], ['/assiduidade-professores', 'Assiduidade dos professores', 'academico'],
-    ['/registo-diario', 'Registo diário', 'pedagogico'],
+    ['/pautas', 'Pautas', 'pedagogico'], ['/aulas', 'Aulas', 'pedagogico'], ['/assiduidade', 'Assiduidade', 'pedagogico'], ['/assiduidade-professores', 'Assiduidade dos professores', 'academico', 'naoProfessor'],
+    ['/registo-diario', 'Registo diário', 'pedagogico'], ['/ocorrencias', 'Ocorrências', 'pedagogico', 'soProfessor'],
   ] },
   { group: 'Secretaria', icon: 'secretaria', items: [
-    ['/secretaria', 'Painel da secretaria', 'cadastro'], ['/candidaturas', 'Candidaturas', 'candidaturas'], ['/matriculas', 'Matrículas e renovações', 'cadastro'],
-    ['/alunos', 'Processos dos alunos', 'cadastro'], ['/encarregados', 'Encarregados', 'cadastro'],
-    ['/pedidos', 'Pedidos e declarações', 'cadastro'], ['/ocorrencias', 'Ocorrências', 'pedagogico'], ['/saude', 'Saúde escolar', 'saude'],
+    ['/secretaria', 'Painel da secretaria', 'cadastro', 'naoProfessor'], ['/candidaturas', 'Candidaturas', 'candidaturas'], ['/matriculas', 'Matrículas e renovações', 'cadastro', 'naoProfessor'],
+    ['/alunos', 'Processos dos alunos', 'cadastro', 'naoProfessor'], ['/encarregados', 'Encarregados', 'cadastro', 'naoProfessor'],
+    ['/pedidos', 'Pedidos e declarações', 'cadastro', 'naoProfessor'], ['/ocorrencias', 'Ocorrências', 'pedagogico', 'naoProfessor'], ['/saude', 'Saúde escolar', 'saude'],
     ['/transporte', 'Transporte', 'transporte'],
   ] },
   { group: 'Financeiro', icon: 'financeiro', items: [
@@ -63,14 +66,29 @@ export const NAV: Grupo[] = [
     ['/mensagens', 'Mensagens e comunicados', 'comunicacao'], ['/regras', 'Regras e modelos', 'comunicacao'],
   ] },
   { group: 'Administrador', icon: 'admin', items: [
-    ['/ciclos', 'Ciclos académicos', 'academico'],
+    ['/ciclos', 'Ciclos académicos', 'academico', 'naoProfessor'],
     ['/utilizadores', 'Utilizadores', 'utilizadores'], ['/perfis', 'Perfis e permissões', 'utilizadores'],
-    ['/definicoes', 'Definições da escola', 'academico'], ['/academico?tab=salas', 'Salas', 'academico'],
+    ['/definicoes', 'Definições da escola', 'academico', 'naoProfessor'], ['/academico?tab=salas', 'Salas', 'academico', 'naoProfessor'],
     ['/auditoria', 'Auditoria', 'utilizadores'], ['/importacao', 'Importação de dados', 'importacao'],
   ] },
 ]
 
 /** O utilizador vê o módulo? (admin vê tudo; os restantes pelas permissões "modulo:ver" do /auth/me). */
+/** Só tem o perfil professor (nenhum outro, como secretaria ou coordenação). */
+export function useSoProfessor() {
+  const { user } = useAuth()
+  const perfis: string[] = Array.isArray(user?.perfis) ? user!.perfis : []
+  return perfis.length > 0 && perfis.every((p) => p === 'professor')
+}
+
+/** Permissão concreta, ex.: permite('academico:criar'). O perfil admin pode tudo. */
+export function usePermite() {
+  const { user } = useAuth()
+  const perms: string[] = Array.isArray(user?.permissoes) ? user!.permissoes : []
+  const admin = (Array.isArray(user?.perfis) ? user!.perfis : []).includes('admin')
+  return (perm: string) => admin || perms.includes(perm)
+}
+
 export function usePode() {
   const { user } = useAuth()
   const perms: string[] = Array.isArray(user?.permissoes) ? user!.permissoes : []
@@ -112,7 +130,7 @@ function activo(to: string, pathname: string, search: string) {
 }
 
 function grupoDe(pathname: string, search: string) {
-  return NAV.find((g) => g.items.some(([to]) => activo(to, pathname, search)))?.group
+  return NAV.find((g) => g.items.some(([to, , , v]) => v !== 'soProfessor' && activo(to, pathname, search)))?.group
 }
 
 function Chev({ open }: { open: boolean }) {
@@ -206,6 +224,8 @@ function Lado({ open, children }: { open: boolean; children: ReactNode }) {
 export function Layout() {
   const loc = useLocation()
   const pode = usePode()
+  const soProfessor = useSoProfessor()
+  const visivel = ([, , m, v]: Item) => pode(m) && (v === 'naoProfessor' ? !soProfessor : v === 'soProfessor' ? soProfessor : true)
   const [aberto, setAberto] = useState(false)          // menu no telemóvel
   const [escondido, setEscondido] = useState(false)    // menu recolhido no computador
   const [grupoAberto, setGrupoAberto] = useState<string | undefined>(() => grupoDe(loc.pathname, loc.search))
@@ -224,7 +244,7 @@ export function Layout() {
         <hr className="side-hr" />
         <div className="side-titulo">Serviços</div>
         {NAV.map((g) => {
-          const itens = g.items.filter(([, , m]) => pode(m))
+          const itens = g.items.filter(visivel)
           if (!itens.length) return null
           const expandido = grupoAberto === g.group
           return (
