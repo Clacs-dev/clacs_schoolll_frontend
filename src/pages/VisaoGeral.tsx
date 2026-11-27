@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { useAuth } from '@/auth/AuthContext'
 import { usePode, useSoProfessor } from '@/components/Layout'
 import { Card, Empty, Loading } from '@/components/ui'
+import { Icone } from '@/components/Icone'
 import { useAnoActivo } from '@/lib/academic'
 import { nameOf, num, type Row } from '@/lib/data'
 import { dataPT } from '@/lib/format'
@@ -70,12 +71,31 @@ export default function VisaoGeral() {
     if (!user?.funcionario_id) return 'A sua conta ainda não está ligada ao seu nome de professor. Peça ao administrador para escolher o "Funcionário associado" em Utilizadores.'
     return `Ainda não tem turmas neste ciclo${ciclo}. Aparecem quando a coordenação lhe atribuir disciplinas em Turmas → Disciplinas, ou o indicar como director de turma.`
   }
+  const h = new Date().getHours()
+  const saudacao = h < 12 ? 'Bom dia' : h < 19 ? 'Boa tarde' : 'Boa noite'
+  const hoje = new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
+  const atalhos = ([
+    ['/matriculas?novo=1', 'Nova matrícula', 'matricula', secretaria],
+    ['/pagamentos?novo=1', 'Registar pagamento', 'financeiro', pode('propinas')],
+    ['/assiduidade', 'Marcar assiduidade', 'visto', pode('pedagogico')],
+    ['/avaliacoes', 'Lançar notas', 'notas', pode('pedagogico')],
+    ['/mensagens', 'Enviar comunicado', 'comunicacao', pode('comunicacao')],
+  ] as [string, string, string, boolean][]).filter(([, , , v]) => v).slice(0, 4)
   const lugares = turmas.rows.reduce((s, t) => s + num(t.capacidade), 0)
   const ocupados = turmas.rows.reduce((s, t) => s + num(t.alunos), 0)
 
   return (
     <>
-      <div className="page-h"><div><h2>Visão geral</h2><p className="sub">Olá, {nameOf(user).split(' ')[0] || 'bem-vindo'}. {ano ? `Resumo da escola no ano lectivo ${ano.designacao}.` : 'Resumo da escola.'}</p></div></div>
+      <section className="home-hero" aria-label="Boas-vindas">
+        <p className="eyebrow">{hoje}</p>
+        <h2>{saudacao}, {nameOf(user).split(' ')[0] || 'bem-vindo'}.</h2>
+        <p>{ano ? `Resumo da escola no ano lectivo ${ano.designacao}. Use as acções abaixo ou Ctrl + K para ir a qualquer ecrã.` : 'Resumo da escola. Use Ctrl + K para ir a qualquer ecrã.'}</p>
+        {atalhos.length > 0 && (
+          <div className="home-accoes">
+            {atalhos.map(([to, l, ic], i) => <Link key={to} to={to} className={i === 0 ? 'pri' : ''}><Icone n={ic} size={17} /> {l}</Link>)}
+          </div>
+        )}
+      </section>
 
       {!anoLoading && !ano && pode('academico') && (
         <Card>
@@ -88,11 +108,11 @@ export default function VisaoGeral() {
       )}
 
       <div className="vg-kpis">
-        <Card><div className="vg-kpi"><span>Alunos activos</span><b>{alunos.isLoading ? '…' : activos}</b>{nee > 0 && <small className="vg-nee">⚠ {nee} com necessidades especiais</small>}</div></Card>
-        <Card><div className="vg-kpi"><span>Turmas</span><b>{turmas.rows.length}</b><small>{ocupados}/{lugares} lugares ocupados</small></div></Card>
-        <Card><div className="vg-kpi"><span>Período lectivo</span><b>{ano?.designacao ?? '—'}</b><small>{ano ? `${dataPT(ano.data_inicio)} a ${dataPT(ano.data_fim)}` : ''}</small></div></Card>
+        <Card><div className="vg-kpi"><div className="vg-kpi-top"><span>Alunos activos</span><i className="kpi-ic"><Icone n="pessoas" size={17} /></i></div><b>{alunos.isLoading ? '…' : activos}</b>{nee > 0 && <small className="vg-nee">⚠ {nee} com necessidades especiais</small>}</div></Card>
+        <Card><div className="vg-kpi"><div className="vg-kpi-top"><span>Turmas</span><i className="kpi-ic"><Icone n="turma" size={17} /></i></div><b>{turmas.rows.length}</b><small>{ocupados}/{lugares} lugares ocupados</small></div></Card>
+        <Card><div className="vg-kpi"><div className="vg-kpi-top"><span>Período lectivo</span><i className="kpi-ic"><Icone n="calendario" size={17} /></i></div><b>{ano?.designacao ?? '—'}</b><small>{ano ? `${dataPT(ano.data_inicio)} a ${dataPT(ano.data_fim)}` : ''}</small></div></Card>
         {secretaria && (
-          <Card><Link to="/pedidos?estado=pendente" className="vg-kpi vg-link"><span>Pedidos por decidir</span><b className={pedidos.rows.length ? 'vg-alerta' : ''}>{pedidos.rows.length}</b><small>dos encarregados, no portal</small></Link></Card>
+          <Card><Link to="/pedidos?estado=pendente" className="vg-kpi vg-link"><div className="vg-kpi-top"><span>Pedidos por decidir</span><i className="kpi-ic" style={pedidos.rows.length ? { background: 'var(--er2)', color: 'var(--er)' } : undefined}><Icone n="doc" size={17} /></i></div><b className={pedidos.rows.length ? 'vg-alerta' : ''}>{pedidos.rows.length}</b><small>dos encarregados, no portal</small></Link></Card>
         )}
       </div>
 

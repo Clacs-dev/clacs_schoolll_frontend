@@ -85,7 +85,7 @@ export default function Alunos() {
       <PageHead
         title="Alunos"
         sub="Cadastro de alunos. Clique num aluno para ver a visão 360°."
-        actions={<Btn onClick={() => setNovo(true)}>Novo aluno</Btn>}
+        actions={<Btn icon="mais" onClick={() => setNovo(true)}>Novo aluno</Btn>}
       />
       <Toolbar>
         <SearchBox value={q} onChange={setQ} placeholder="Procurar por nome ou processo" />

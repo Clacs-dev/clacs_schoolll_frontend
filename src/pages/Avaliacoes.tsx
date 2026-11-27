@@ -64,7 +64,7 @@ export default function Avaliacoes() {
   return (
     <>
       <PageHead title="Avaliações e notas" sub={`Crie avaliações por turma, disciplina e período${ano ? ` (${pick(ano, 'designacao')})` : ''} e lance as notas.`}
-        actions={tab === 'lista' && <Btn disabled={!turma || semPlano} onClick={() => setNovo(true)}>Nova avaliação</Btn>} />
+        actions={tab === 'lista' && <Btn icon="mais" disabled={!turma || semPlano} onClick={() => setNovo(true)}>Nova avaliação</Btn>} />
       <Tabs value={tab} onChange={setTab} tabs={[['lista', 'Avaliações'], ['tipos', 'Tipos de avaliação']]} />
       {tab === 'lista' && (
         <>

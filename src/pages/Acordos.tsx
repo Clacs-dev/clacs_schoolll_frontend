@@ -125,7 +125,7 @@ function Lista() {
           { value: 'proposto', label: 'Por aprovar' }, { value: 'activo', label: 'Em curso' }, { value: 'incumprimento', label: 'Em incumprimento' },
           { value: 'cumprido', label: 'Cumpridos' }, { value: 'cancelado', label: 'Cancelados' }]} />
         <span className="grow" />
-        <Btn onClick={() => setNovo(true)}>Novo acordo</Btn>
+        <Btn icon="mais" onClick={() => setNovo(true)}>Novo acordo</Btn>
       </Toolbar>
       <Table rows={q.rows} loading={q.isLoading} error={q.error} onRetry={() => q.refetch()} empty="Não há acordos."
         expand={(a) => (

@@ -107,7 +107,7 @@ export function Resource({
           {title && <h3 style={{ marginRight: 'auto' }}>{title}</h3>}
           {search && <SearchBox value={term} onChange={setTerm} placeholder="Filtrar…" />}
           {toolbar}
-          {createFields && <Btn onClick={() => setCreating(true)}>{createLabel}</Btn>}
+          {createFields && <Btn icon="mais" onClick={() => setCreating(true)}>{createLabel}</Btn>}
         </div>
       )}
       {hint && <p className="note" style={{ margin: '0 0 10px' }}>{hint}</p>}

@@ -95,7 +95,7 @@ export default function Pagamentos() {
   const [enc, setEnc] = useState('')
   const [desde, setDesde] = useState('')
   const [ate, setAte] = useState('')
-  const [novo, setNovo] = useState(false)
+  const [novo, setNovo] = useState(sp.get('novo') === '1')   // acção rápida do topo: /pagamentos?novo=1
   const [comp, setComp] = useState<Row | null>(null)
   const encs = useList('/encarregados')
   const q = useList('/pagamentos', { estado, encarregado_id: enc, desde, ate }, { keep: true })
@@ -108,7 +108,7 @@ export default function Pagamentos() {
 
   return (
     <>
-      <PageHead title="Pagamentos" sub="Registo de pagamentos, confirmação de comprovativos e recibos." actions={<Btn onClick={() => setNovo(true)}>Registar pagamento</Btn>} />
+      <PageHead title="Pagamentos" sub="Registo de pagamentos, confirmação de comprovativos e recibos." actions={<Btn icon="mais" onClick={() => setNovo(true)}>Registar pagamento</Btn>} />
       <Toolbar>
         <Select label="Encarregado" value={enc} onChange={setEnc} placeholder="Todos os encarregados" options={encs.rows.map((x) => ({ value: x.id, label: String(pick(x, 'nome_completo', 'nome')) }))} />
         <Select label="Estado" value={estado} onChange={setEstado} placeholder="Todos os estados" options={[{ value: 'pendente', label: 'Pendentes' }, { value: 'confirmado', label: 'Confirmados' }, { value: 'rejeitado', label: 'Rejeitados' }]} />

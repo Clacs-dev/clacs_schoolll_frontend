@@ -64,7 +64,7 @@ function DetalheOrcamento({ o }: { o: Row }) {
           { h: 'Despesa realizada', right: true, render: (r) => Kz(r.realizado_despesa) },
         ]} />
       </Card>
-      <Card title="Linhas do orçamento" actions={o.estado !== 'fechado' && <Btn size="sm" onClick={() => setNova(true)}>Nova linha</Btn>} pad={false}>
+      <Card title="Linhas do orçamento" actions={o.estado !== 'fechado' && <Btn icon="mais" size="sm" onClick={() => setNova(true)}>Nova linha</Btn>} pad={false}>
         <Table rows={linhas.rows} loading={linhas.isLoading} pageSize={0} empty="Ainda não há linhas." cols={[
           { h: 'Tipo', render: (r) => (r.tipo === 'receita' ? 'Receita' : 'Despesa') },
           { h: 'Categoria', render: (r) => label(r.categoria) },
@@ -102,7 +102,7 @@ function Orcamentos() {
           options={lista.rows.map((x) => ({ value: String(x.id), label: String(x.designacao) }))} />
         {o && <Select label="Estado" value={String(o.estado)} onChange={(v) => mudarEstado.mutate({ id: o.id, estado: v })} options={ESTADOS} />}
         <span className="grow" />
-        <Btn disabled={!ciclo} onClick={() => setNovo(true)}>Novo orçamento</Btn>
+        <Btn icon="mais" disabled={!ciclo} onClick={() => setNovo(true)}>Novo orçamento</Btn>
       </Toolbar>
       {lista.isLoading ? <Loading /> : o ? <DetalheOrcamento key={String(o.id)} o={o} /> : null}
       {novo && <FormDialog title="Novo orçamento" onClose={() => setNovo(false)} onSubmit={(p) => criar.mutateAsync(p)}

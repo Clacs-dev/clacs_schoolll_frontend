@@ -66,7 +66,7 @@ export function Periodos({ ano, onClose }: { ano: Row; onClose: () => void }) {
   const [novo, setNovo] = useState(false)
   const criar = useAct((p: Row) => api.post(`/anos-lectivos/${ano.id}/periodos`, p), { invalidate: [`/anos-lectivos/${ano.id}`], ok: 'Período criado.' })
   return (
-    <Modal title={`Períodos de avaliação — ${pick(ano, 'designacao')}`} size="lg" onClose={onClose} footer={<><Btn variant="ghost" onClick={() => setNovo(true)}>Novo período</Btn><Btn onClick={onClose}>Fechar</Btn></>}>
+    <Modal title={`Períodos de avaliação — ${pick(ano, 'designacao')}`} size="lg" onClose={onClose} footer={<><Btn icon="mais" variant="ghost" onClick={() => setNovo(true)}>Novo período</Btn><Btn onClick={onClose}>Fechar</Btn></>}>
       <Resource path={`/anos-lectivos/${ano.id}/periodos`} pageSize={0}
         editFields={periodoFields} editPath={(r) => `/periodos/${r.id}`} deletePath={(r) => `/periodos/${r.id}`}
         cols={[
@@ -291,7 +291,7 @@ function TemposLectivos({ rows }: { rows: Row[] }) {
   const proximo = PARES.find((p) => !doTempo(2 * p.value - 1)?.hora_inicio)?.value ?? 1
   return (
     <>
-      <Resource path="/tempos-lectivos" editFields={tempoFields} toolbar={<Btn onClick={() => setAberto(true)}>Novo par de tempos</Btn>}
+      <Resource path="/tempos-lectivos" editFields={tempoFields} toolbar={<Btn icon="mais" onClick={() => setAberto(true)}>Novo par de tempos</Btn>}
         editPath={(r) => `/tempos-lectivos/${r.id}`} deletePath={(r) => `/tempos-lectivos/${r.id}`}
         hint="Os tempos registam-se aos pares (1.º e 2.º, 3.º e 4.º, 5.º e 6.º) com as horas de cada um. No horário escolhe-se o tempo e as horas vêm dele."
         empty="Ainda não há tempos lectivos. Registe o 1.º e o 2.º tempo (ex.: 07:30–08:15 e 08:20–09:05)."

@@ -44,7 +44,7 @@ function ListaRegras() {
         <span className="grow" />
         <Btn variant="ghost" busy={exec.isPending} onClick={() => exec.mutate()}>Avaliar regras agora</Btn>
         <Btn variant="ghost" busy={desp.isPending} onClick={() => desp.mutate()}>Enviar mensagens em fila</Btn>
-        <Btn onClick={() => setNovo(true)}>Nova regra</Btn>
+        <Btn icon="mais" onClick={() => setNovo(true)}>Nova regra</Btn>
       </div>
       <Card>
         {q.isLoading ? <Loading /> : !q.rows.length ? <Empty>Ainda não há regras. Crie a primeira para automatizar lembretes e avisos.</Empty> : (

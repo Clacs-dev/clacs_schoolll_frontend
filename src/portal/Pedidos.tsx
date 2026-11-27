@@ -123,7 +123,7 @@ export default function PortalPedidos() {
   return (
     <>
       <PageHead title="Pedidos à escola" sub="Peça uma vaga, matrícula, transferência ou declaração, ou justifique uma falta. Acompanhe aqui a resposta da escola."
-        actions={<Btn onClick={() => setNovo(true)}>Novo pedido</Btn>} />
+        actions={<Btn icon="mais" onClick={() => setNovo(true)}>Novo pedido</Btn>} />
       <Toolbar>
         <Select label="Tipo" value={tipo} onChange={setTipo} placeholder="Todos os pedidos" options={TIPOS_PEDIDO} />
       </Toolbar>

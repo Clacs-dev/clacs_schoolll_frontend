@@ -108,7 +108,7 @@ function Ocorrencias() {
       <Toolbar>
         <Select label="Estado" value={estado} onChange={setEstado} placeholder="Todas" options={[{ value: 'aberta', label: 'Em seguimento' }, { value: 'encerrada', label: 'Encerradas' }]} />
         <span className="grow" />
-        <Btn onClick={() => setNova(true)}>Nova ocorrência</Btn>
+        <Btn icon="mais" onClick={() => setNova(true)}>Nova ocorrência</Btn>
       </Toolbar>
       <Table rows={q.rows} loading={q.isLoading} error={q.error} onRetry={() => q.refetch()} onRow={(r) => setVer(Number(r.id))}
         empty="Não há ocorrências de saúde." cols={[
@@ -164,7 +164,7 @@ function Medicacao() {
           { value: 'pendente', label: 'Por autorizar' }, { value: 'activas', label: 'Em vigor hoje' }, { value: 'autorizada', label: 'Autorizadas' },
           { value: 'recusada', label: 'Recusadas' }, { value: 'terminada', label: 'Terminadas' }]} />
         <span className="grow" />
-        <Btn variant="ghost" onClick={() => setNova(true)}>Registar instrução em papel</Btn>
+        <Btn icon="mais" variant="ghost" onClick={() => setNova(true)}>Registar instrução em papel</Btn>
       </Toolbar>
       <Table rows={q.rows} loading={q.isLoading} error={q.error} onRetry={() => q.refetch()} empty="Nada a mostrar." cols={[
         { h: 'Aluno', k: 'aluno' },

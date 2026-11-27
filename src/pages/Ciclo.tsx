@@ -202,7 +202,7 @@ function Horarios({ c }: { c: Row }) {
         {turma && <Btn variant="ghost" disabled={!q.rows.length}
           onClick={() => api.download(`/turmas/${turma}/horario.pdf`, { data }).catch((e) => toast.error(errMsg(e)))}>
           Baixar horário (PDF)</Btn>}
-        {turma && <Btn disabled={semTempos} onClick={() => setNovo(true)}>Novo tempo lectivo</Btn>}
+        {turma && <Btn icon="mais" disabled={semTempos} onClick={() => setNovo(true)}>Novo tempo lectivo</Btn>}
       </div>
       {semTempos && (
         <p className="note" style={{ margin: '0 0 12px' }}>

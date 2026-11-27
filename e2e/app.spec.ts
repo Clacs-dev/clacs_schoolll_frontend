@@ -221,6 +221,7 @@ test.describe('Fluxos de negócio', () => {
     await dlg.getByLabel('Data de nascimento').fill('2015-05-20')
     await dlg.getByLabel('Sexo').selectOption('M')
     await dlg.getByRole('button', { name: 'Guardar aluno' }).click()
+    await expect.poll(() => calls.some((c) => c.method === 'POST' && c.path === '/alunos')).toBe(true)
     const post = calls.find((c) => c.method === 'POST' && c.path === '/alunos')!
     expect(post.body).toMatchObject({ nome_completo: 'Zeferino Teste', data_nascimento: '2015-05-20', sexo: 'M', parentesco: 'mae', nacionalidade: 'Angolana' })
     await expect(page).toHaveURL(/\/alunos\/99$/)

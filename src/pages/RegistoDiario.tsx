@@ -19,7 +19,7 @@ export default function RegistoDiario() {
   return (
     <>
       <PageHead title="Registo diário" sub="Comportamento e notas do dia por turma ou por aluno, visíveis na visão 360°."
-        actions={<Btn disabled={!turma} onClick={() => setNovo(true)}>Novo registo</Btn>} />
+        actions={<Btn icon="mais" disabled={!turma} onClick={() => setNovo(true)}>Novo registo</Btn>} />
       <Toolbar>
         <Select label="Turma" value={turma} onChange={setTurma} placeholder="Escolha a turma" options={turmas.rows.map((t) => ({ value: t.id, label: String(pick(t, 'designacao')) }))} />
         <input type="date" aria-label="Data" value={data} onChange={(e) => setData(e.target.value)} />

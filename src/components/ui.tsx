@@ -1,14 +1,16 @@
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { humanize, type Row } from '@/lib/data'
 import { Kz, dataPT, label, toneOf, type Tone } from '@/lib/format'
+import { Icone } from './Icone'
 
 export function Spinner({ size = 18 }: { size?: number }) {
   return <span className="spin" style={{ width: size, height: size }} role="progressbar" aria-label="A carregar" />
 }
 
+/** Botão. Variantes como no Material 3: primary (cheio), tonal, ghost (contorno), danger e link. "icon": nome de um ícone. */
 export function Btn({
-  variant = 'primary', size, busy, children, ...p
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'danger' | 'link'; size?: 'sm'; busy?: boolean }) {
+  variant = 'primary', size, busy, icon, children, ...p
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'tonal' | 'ghost' | 'danger' | 'link'; size?: 'sm'; busy?: boolean; icon?: string }) {
   return (
     <button
       type="button"
@@ -16,7 +18,7 @@ export function Btn({
       disabled={p.disabled || busy}
       className={`btn ${variant === 'primary' ? '' : variant} ${size || ''} ${p.className || ''}`}
     >
-      {busy && <Spinner size={14} />}
+      {busy ? <Spinner size={14} /> : icon && <Icone n={icon} size={size === 'sm' ? 15 : 17} />}
       {children}
     </button>
   )
@@ -46,10 +48,14 @@ export function Card({ title, actions, children, className = '', pad = true }: {
   )
 }
 
-export function Kpi({ label: l, value, tone, hint, onClick }: { label: string; value: ReactNode; tone?: 'good' | 'bad' | 'warn'; hint?: string; onClick?: () => void }) {
+/** Indicador: rótulo, valor grande e nota. "icon" mostra um ícone num círculo tonal (cor pelo tom). */
+export function Kpi({ label: l, value, tone, hint, icon, onClick }: { label: string; value: ReactNode; tone?: 'good' | 'bad' | 'warn'; hint?: string; icon?: string; onClick?: () => void }) {
   const inner = (
     <>
-      <span>{l}</span>
+      <span className="kpi-top">
+        <span>{l}</span>
+        {icon && <i className="kpi-ic"><Icone n={icon} size={17} /></i>}
+      </span>
       <b>{value}</b>
       {hint && <small>{hint}</small>}
     </>

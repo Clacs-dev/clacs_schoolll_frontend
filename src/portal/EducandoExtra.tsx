@@ -93,7 +93,7 @@ export function SaudeEducando({ id }: { id: string }) {
   const ocorrencias = asList(q.data?.ocorrencias), medicacao = asList(q.data?.medicacao)
   return (
     <div className="stack">
-      <Card title="Medicação na escola" actions={<Btn size="sm" onClick={() => setNova(true)}>Nova instrução</Btn>} pad={false}>
+      <Card title="Medicação na escola" actions={<Btn icon="mais" size="sm" onClick={() => setNova(true)}>Nova instrução</Btn>} pad={false}>
         <Table rows={medicacao} pageSize={0} empty="Não há instruções de medicação." cols={[
           { h: 'Medicamento', render: (r) => <b>{String(r.medicamento)}</b> },
           { h: 'Dose', k: 'dose' },

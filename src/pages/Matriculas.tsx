@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { FormDialog } from '@/components/FormDialog'
 import { Modal, useConfirm } from '@/components/Modal'
 import { Resource } from '@/components/Resource'
@@ -33,7 +34,8 @@ export default function Matriculas() {
   const [turma, setTurma] = useState('')
   const turmas = useList('/turmas')
   const [dlg, setDlg] = useState<{ k: 'turma' | 'desc' | 'hist'; m: Row } | null>(null)
-  const [nova, setNova] = useState(false)
+  const [sp] = useSearchParams()
+  const [nova, setNova] = useState(sp.get('novo') === '1')   // acção rápida do topo: /matriculas?novo=1
 
   const anoId = anoSel || (ano?.id ? String(ano.id) : '')
   const inv = ['/matriculas', '/alunos', '/turmas']
@@ -52,7 +54,7 @@ export default function Matriculas() {
           <>
             <Select label="Ano lectivo" value={anoId} onChange={setAnoSel} options={anos.map((a) => ({ value: a.id, label: String(pick(a, 'designacao', 'nome')) }))} />
             <Select label="Turma" value={turma} onChange={setTurma} placeholder="Todas as turmas" options={turmas.rows.map((t) => ({ value: t.id, label: String(pick(t, 'designacao', 'nome')) }))} />
-            <Btn onClick={() => setNova(true)}>Nova matrícula</Btn>
+            <Btn icon="mais" onClick={() => setNova(true)}>Nova matrícula</Btn>
           </>
         }
         invalidate={inv}

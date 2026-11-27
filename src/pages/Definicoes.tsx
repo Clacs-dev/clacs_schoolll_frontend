@@ -53,7 +53,7 @@ function Parametros() {
           { h: 'Descrição', k: 'descricao', nowrap: false },
         ]}
         rowActions={(r) => <Btn variant="link" onClick={() => setEdit(r)}>Alterar</Btn>}
-        toolbar={<Btn onClick={() => setNovo(true)}>Novo parâmetro</Btn>}
+        toolbar={<Btn icon="mais" onClick={() => setNovo(true)}>Novo parâmetro</Btn>}
       />
       {novo && (
         <FormDialog

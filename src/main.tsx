@@ -9,6 +9,7 @@ import { MotionProvider } from '@/components/Motion'
 import { ApiError } from '@/lib/api'
 import App from './App'
 import './styles/app.css'
+import './styles/ds.css'
 
 try {
   const t = localStorage.getItem('clacs.theme')

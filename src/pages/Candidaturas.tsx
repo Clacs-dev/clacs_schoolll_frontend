@@ -311,7 +311,7 @@ export default function Candidaturas() {
             Importar CSV
             <input type="file" accept=".csv,text/csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) importar.mutate(f); e.target.value = '' }} />
           </label>
-          <Btn onClick={() => setNova(true)}>Nova pré-inscrição</Btn>
+          <Btn icon="mais" onClick={() => setNova(true)}>Nova pré-inscrição</Btn>
         </>}
       />
       <div className="grid" style={{ marginBottom: 12 }}>

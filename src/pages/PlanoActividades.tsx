@@ -197,7 +197,7 @@ export function Plano({ c }: { c: Row }) {
         <Tabs<Vista> tabs={[['semanas', 'Por semanas'], ['mes', 'Calendário mensal'], ['lista', 'Lista']]} value={vista} onChange={setVista} />
         {!encerrado && <div className="row-a">
           <Btn variant="ghost" onClick={() => setCopiar(true)}>Copiar de outro ciclo</Btn>
-          {vista !== 'lista' && <Btn onClick={() => setNova(true)}>Nova actividade</Btn>}
+          {vista !== 'lista' && <Btn icon="mais" onClick={() => setNova(true)}>Nova actividade</Btn>}
         </div>}
       </div>
 
